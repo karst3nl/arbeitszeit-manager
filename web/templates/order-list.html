@@ -1,8 +1,8 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 {{define "order-cards"}}
-{{if .}}
+{{if .Orders}}
   <div class="cards">
-    {{range .}}
+    {{range .Orders}}
       <article class="card order-card">
         <header>
           <strong><a href="/orders/{{.ID}}">{{.Title}}</a></strong>
@@ -15,9 +15,9 @@
           {{if .Interrupted}}<span class="badge warn">Timer korrigiert</span>{{end}}
         </p>
         <p class="figures">
-          Soll <strong>{{minutes .PlannedMinutes}}</strong> <span class="muted">({{aw .PlannedMinutes}})</span> ·
-          Ist <strong>{{dur .ActualSeconds}}</strong> <span class="muted">({{awSeconds .ActualSeconds}})</span> ·
-          Δ <strong>{{signed (.DeltaSeconds)}}</strong> <span class="muted">({{awSeconds (.DeltaSeconds)}})</span>
+          Soll <strong>{{minutes .PlannedMinutes}}</strong> <span class="muted">({{aw .PlannedMinutes $.AWFactor}})</span> ·
+          Ist <strong>{{dur .ActualSeconds}}</strong> <span class="muted">({{awSeconds .ActualSeconds $.AWFactor}})</span> ·
+          Δ <strong>{{signed (.DeltaSeconds)}}</strong> <span class="muted">({{awSeconds (.DeltaSeconds) $.AWFactor}})</span>
           <span class="muted">({{pct (.DeltaPercent)}})</span>
         </p>
         <footer class="muted">{{.OwnerName}} · {{date .CreatedAt}}
@@ -61,17 +61,17 @@
   <section class="card order-group">
     <h2>Offene Aufträge <span class="count">{{.CountOpen}}</span></h2>
     <p class="muted">Noch nicht begonnen{{if .User.IsAdmin}} oder keiner Person zugewiesen{{end}}.</p>
-    {{template "order-cards" .OpenOrders}}
+    {{template "order-cards" (orderCards $.AWFactor .OpenOrders)}}
   </section>
 
   <section class="card order-group">
     <h2>In Bearbeitung <span class="count">{{.CountActive}}</span></h2>
     <p class="muted">Timer läuft oder ist pausiert.</p>
-    {{template "order-cards" .ActiveOrders}}
+    {{template "order-cards" (orderCards $.AWFactor .ActiveOrders)}}
   </section>
 
   <details class="card order-group collapsed"{{if eq .OrderFilter "done"}} open{{end}}>
     <summary>Abgeschlossen ({{.CountDone}})</summary>
-    {{template "order-cards" .DoneOrders}}
+    {{template "order-cards" (orderCards $.AWFactor .DoneOrders)}}
   </details>
 {{end}}

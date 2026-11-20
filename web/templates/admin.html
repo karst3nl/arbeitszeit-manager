@@ -32,6 +32,21 @@
     </article>
 
     <article class="card">
+      <h2>AW-Faktor</h2>
+      <p class="muted">Minuten pro Arbeitswert (AW). Standard: 6 Minuten, also 10 AW = 1 Stunde.</p>
+      <form method="post" action="/admin/aw-factor">
+        {{template "csrf" .}}
+        <label>Minuten pro AW
+          <input name="minutes_per_aw" value="{{.AWFactor}}" inputmode="decimal" required placeholder="z. B. 6">
+        </label>
+        <p class="muted field-hint">Dezimalkomma oder -punkt ist erlaubt. Bereits gespeicherte Soll-Minuten bleiben erhalten; nur die AW-Anzeige und neue AW-Eingaben nutzen den neuen Faktor.</p>
+        <div class="actions">
+          <button type="submit" class="secondary">Faktor speichern</button>
+        </div>
+      </form>
+    </article>
+
+    <article class="card">
       <h2>Aufgaben-Vorlagen</h2>
       <p class="muted">Stehen beim Anlegen eines Auftrags zur Auswahl.</p>
       <form method="post" action="/admin/task-templates">

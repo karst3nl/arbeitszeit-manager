@@ -24,7 +24,7 @@
       <h2>Soll-Zeit</h2>
       <p>
         Aktuelles Soll: <strong>{{minutes .Order.PlannedMinutes}}</strong>
-        <span class="muted">({{aw .Order.PlannedMinutes}}, vom Ersteller beim Anlegen festgelegt)</span>
+        <span class="muted">({{aw .Order.PlannedMinutes .AWFactor}}, vom Ersteller beim Anlegen festgelegt)</span>
       </p>
       <p class="muted">Die Aufgaben selbst haben keine Zeitangabe; das Soll gilt für den gesamten Auftrag.</p>
     </article>

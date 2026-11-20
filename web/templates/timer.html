@@ -8,6 +8,7 @@
           data-state="{{.State}}"
           data-since="{{.Since}}"
           data-planned="{{.Order.PlannedMinutes}}"
+          data-aw-minutes="{{.AWFactor}}"
           data-now="{{.ServerNow}}">{{dur .Elapsed}}</span>
     <span class="badge {{if eq .State "running"}}running{{else if eq .State "paused"}}paused{{else}}open{{end}}">
       {{if eq .State "running"}}läuft{{else if eq .State "paused"}}pausiert{{else}}gestoppt{{end}}
@@ -50,9 +51,9 @@
   </div>
 
   <p class="figures">
-    Soll <strong>{{minutes .Order.PlannedMinutes}}</strong> <span class="muted">({{aw .Order.PlannedMinutes}})</span> ·
-    Ist <strong id="timer-ist">{{dur .Elapsed}}</strong> <span class="muted">(<span id="timer-ist-aw">{{awSeconds .Elapsed}}</span>)</span> ·
-    Δ <strong id="timer-delta">{{signed .Delta}}</strong> <span class="muted">(<span id="timer-delta-aw">{{awSeconds .Delta}}</span>)</span>
+    Soll <strong>{{minutes .Order.PlannedMinutes}}</strong> <span class="muted">({{aw .Order.PlannedMinutes .AWFactor}})</span> ·
+    Ist <strong id="timer-ist">{{dur .Elapsed}}</strong> <span class="muted">(<span id="timer-ist-aw">{{awSeconds .Elapsed .AWFactor}}</span>)</span> ·
+    Δ <strong id="timer-delta">{{signed .Delta}}</strong> <span class="muted">(<span id="timer-delta-aw">{{awSeconds .Delta .AWFactor}}</span>)</span>
     <span class="muted">(<span id="timer-delta-pct">{{pct .DeltaPct}}</span>)</span>
   </p>
 </div>

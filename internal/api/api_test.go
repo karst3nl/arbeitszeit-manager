@@ -442,6 +442,43 @@ func TestOrderCreationRequiresAssigneeAndAW(t *testing.T) {
 	}
 }
 
+func TestAdminAWFactorIsUsed(t *testing.T) {
+	ts, client, csrf := setup(t)
+	base := ts.URL
+
+	body := post(t, client, base+"/admin/aw-factor", url.Values{
+		"csrf": {csrf}, "minutes_per_aw": {"10"},
+	})
+	if !strings.Contains(body, "AW-Faktor gespeichert.") {
+		t.Fatalf("AW factor was not saved: %s", body)
+	}
+
+	body = get(t, client, base+"/")
+	if !strings.Contains(body, "1 AW = 10 Minuten") {
+		t.Fatalf("dashboard hint does not show the configured factor: %s", body)
+	}
+	body = post(t, client, base+"/orders", url.Values{
+		"csrf": {csrf}, "customer": {"Faktor Auftrag"}, "plate": {"M-FA 1"},
+		"aw": {"6"}, "assignee_id": {"1"},
+	})
+	if !strings.Contains(body, "1 h 0 min") || !strings.Contains(body, "6 AW") {
+		t.Fatalf("AW factor was not used for Soll: %s", body)
+	}
+	post(t, client, base+"/orders/1/timer/start", url.Values{"csrf": {csrf}})
+	post(t, client, base+"/orders/1/timer/stop", url.Values{"csrf": {csrf}})
+	csv := get(t, client, base+"/orders/1/report.csv")
+	if !strings.Contains(csv, "Soll (AW);6") {
+		t.Fatalf("CSV did not use the configured factor: %s", csv)
+	}
+
+	body = post(t, client, base+"/admin/aw-factor", url.Values{
+		"csrf": {csrf}, "minutes_per_aw": {"0"},
+	})
+	if !strings.Contains(body, "größer als 0") {
+		t.Fatalf("invalid AW factor was accepted: %s", body)
+	}
+}
+
 func TestInlineTemplateCreationFromDashboard(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL

@@ -9,7 +9,7 @@ Schlanke Webapp für Arbeitsaufträge mit geplanten Zeiten, einem Timer für die
 ## Funktionen
 
 - **Arbeitsaufträge** mit Titel aus Kundenname und Kennzeichen, Beschreibung und beliebigen Aufgaben ohne einzelne Zeitangaben
-- **Soll-Zeit** wird vom Ersteller beim Anlegen in AW gesetzt (10 AW = 1 Stunde, 1 AW = 6 Minuten); Nachkommastellen sind erlaubt. Anzeige und Auswertung zeigen AW zusätzlich zu Stunden/Minuten
+- **Soll-Zeit** wird vom Ersteller beim Anlegen in AW gesetzt; Nachkommastellen sind erlaubt. Der Faktor (Minuten pro AW, Standard 6 = 10 AW pro Stunde) ist im Adminbereich einstellbar. Anzeige und Auswertung zeigen AW zusätzlich zu Stunden/Minuten
 - **Zuweisung beim Anlegen**: der Auftrag wird direkt einem aktiven Nutzer zugeordnet
 - **Aufgaben-Vorlagen**: Admins pflegen die Liste im Adminbereich oder legen neue Aufgaben direkt im Dropdown des Anlegeformulars an; mehrere Vorlagen werden per Mehrfachauswahl in den Auftrag kopiert
 - **Ein Timer pro Auftrag**: Start → Pause → Weiter → Ende, beliebig viele Pausen

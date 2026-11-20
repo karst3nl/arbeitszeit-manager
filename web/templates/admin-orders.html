@@ -9,7 +9,7 @@
     <section class="card order-group">
       <h2>Nicht zugeteilt <span class="count">{{len .Unassigned}}</span></h2>
       <p class="muted">Noch keinem Nutzer zugewiesen.</p>
-      {{template "order-cards" .Unassigned}}
+      {{template "order-cards" (orderCards $.AWFactor .Unassigned)}}
     </section>
   {{end}}
 
@@ -21,7 +21,7 @@
         Läuft <strong>{{.CountActive}}</strong> ·
         Abgeschlossen <strong>{{.CountDone}}</strong>
       </p>
-      {{template "order-cards" .Orders}}
+      {{template "order-cards" (orderCards $.AWFactor .Orders)}}
     </section>
   {{else}}
     <p class="muted">Noch keine weiteren Nutzer angelegt.</p>

@@ -16,21 +16,21 @@
   <article class="card col-main">
     <h2>Soll / Ist</h2>
     <div class="figures big">
-      <div><span class="muted">Soll</span><strong>{{minutes .Report.PlannedMinutes}}</strong> <span class="muted">{{aw .Report.PlannedMinutes}}</span></div>
-      <div><span class="muted">Ist</span><strong>{{dur .Report.ActualSeconds}}</strong> <span class="muted">{{awSeconds .Report.ActualSeconds}}</span></div>
-      <div><span class="muted">Abweichung</span><strong>{{signed .Report.DeviationSeconds}}</strong> <span class="muted">{{awSeconds .Report.DeviationSeconds}}</span></div>
+      <div><span class="muted">Soll</span><strong>{{minutes .Report.PlannedMinutes}}</strong> <span class="muted">{{aw .Report.PlannedMinutes .AWFactor}}</span></div>
+      <div><span class="muted">Ist</span><strong>{{dur .Report.ActualSeconds}}</strong> <span class="muted">{{awSeconds .Report.ActualSeconds .AWFactor}}</span></div>
+      <div><span class="muted">Abweichung</span><strong>{{signed .Report.DeviationSeconds}}</strong> <span class="muted">{{awSeconds .Report.DeviationSeconds .AWFactor}}</span></div>
       <div><span class="muted">Prozent</span><strong>{{pct .Report.DeviationPercent}}</strong></div>
     </div>
 
     <div class="bar-row">
       <span>Soll</span>
       <div class="bar-track"><div class="bar soll" style="width: {{.BarSoll}}%"></div></div>
-      <span>{{minutes .Report.PlannedMinutes}} ({{aw .Report.PlannedMinutes}})</span>
+      <span>{{minutes .Report.PlannedMinutes}} ({{aw .Report.PlannedMinutes .AWFactor}})</span>
     </div>
     <div class="bar-row">
       <span>Ist</span>
       <div class="bar-track"><div class="bar ist" style="width: {{.BarIst}}%"></div></div>
-      <span>{{dur .Report.ActualSeconds}} ({{awSeconds .Report.ActualSeconds}})</span>
+      <span>{{dur .Report.ActualSeconds}} ({{awSeconds .Report.ActualSeconds .AWFactor}})</span>
     </div>
 
     <p><strong>{{.Report.Summary}}</strong></p>

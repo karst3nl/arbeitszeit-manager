@@ -26,9 +26,11 @@
     return (v < 0 ? '' : '+') + v.toFixed(1) + ' %';
   }
 
-  function aw(seconds) {
-    // 10 AW = 1 Stunde, also 1 AW = 360 Sekunden.
-    var value = Math.round(seconds / 360 * 10) / 10;
+  function aw(seconds, minutesPerAW) {
+    // The admin can change the factor; the server sends it with the fragment.
+    var factor = Number(minutesPerAW) || 6;
+    var magnitude = Math.round(Math.abs(seconds) / 60 / factor * 10) / 10;
+    var value = seconds < 0 ? -magnitude : magnitude;
     var text = value.toFixed(1).replace('.', ',').replace(/,0$/, '');
     return text + ' AW';
   }
@@ -66,10 +68,11 @@
     if (deltaEl) deltaEl.textContent = signed(delta);
     var pctEl = document.getElementById('timer-delta-pct');
     if (pctEl) pctEl.textContent = percent(delta, Number(el.dataset.planned || 0) * 60);
+    var factor = el.dataset.awMinutes;
     var istAw = document.getElementById('timer-ist-aw');
-    if (istAw) istAw.textContent = aw(elapsed);
+    if (istAw) istAw.textContent = aw(elapsed, factor);
     var deltaAw = document.getElementById('timer-delta-aw');
-    if (deltaAw) deltaAw.textContent = aw(delta);
+    if (deltaAw) deltaAw.textContent = aw(delta, factor);
   }
 
   tick();

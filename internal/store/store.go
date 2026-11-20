@@ -262,6 +262,31 @@ func (s *Store) ActiveUser(id int64) (bool, error) {
 	return active == 1, nil
 }
 
+// AWMinutes returns the configured number of minutes per Arbeitswert.
+func (s *Store) AWMinutes() (float64, error) {
+	var raw string
+	err := s.db.QueryRow(`SELECT value FROM settings WHERE key = 'aw_minutes'`).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return timer.DefaultMinutesPerAW, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	value, err := strconv.ParseFloat(strings.ReplaceAll(raw, ",", "."), 64)
+	if err != nil {
+		return timer.DefaultMinutesPerAW, nil
+	}
+	return timer.NormalizeMinutesPerAW(value), nil
+}
+
+// SetAWMinutes stores the configured number of minutes per Arbeitswert.
+func (s *Store) SetAWMinutes(value float64) error {
+	raw := strconv.FormatFloat(timer.NormalizeMinutesPerAW(value), 'f', -1, 64)
+	_, err := s.db.Exec(`INSERT INTO settings(key, value) VALUES('aw_minutes', ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, raw)
+	return err
+}
+
 // Users lists all users, active ones first.
 func (s *Store) Users() ([]model.User, error) {
 	rows, err := s.db.Query(`SELECT ` + userColumns + ` FROM users ORDER BY active DESC, username`)

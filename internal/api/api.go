@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io/fs"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -41,6 +42,13 @@ type userOrders struct {
 	CountDone   int
 }
 
+// orderCardsData carries the AW factor into the reusable order card template,
+// which is invoked for order slices rather than the full page data.
+type orderCardsData struct {
+	Orders   []model.Order
+	AWFactor float64
+}
+
 type pageData struct {
 	Title   string
 	Nav     string
@@ -49,6 +57,8 @@ type pageData struct {
 	Flash   string
 	Error   string
 	Version string
+
+	AWFactor float64
 
 	Orders        []model.Order
 	OpenOrders    []model.Order
@@ -83,7 +93,10 @@ var templateFuncs = template.FuncMap{
 	"minutes":   timer.Minutes,
 	"aw":        timer.AWFromMinutes,
 	"awSeconds": timer.AWFromSeconds,
-	"date":      timer.DateTime,
+	"orderCards": func(factor float64, orders []model.Order) orderCardsData {
+		return orderCardsData{Orders: orders, AWFactor: factor}
+	},
+	"date": timer.DateTime,
 	"upperFirst": func(s string) string {
 		if s == "" {
 			return "?"
@@ -152,6 +165,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /admin/task-templates", s.auth.RequireAdmin(http.HandlerFunc(s.createTaskTemplate)))
 	mux.Handle("POST /admin/task-templates/{id}", s.auth.RequireAdmin(http.HandlerFunc(s.updateTaskTemplate)))
 	mux.Handle("POST /admin/task-templates/{id}/delete", s.auth.RequireAdmin(http.HandlerFunc(s.deleteTaskTemplate)))
+	mux.Handle("POST /admin/aw-factor", s.auth.RequireAdmin(http.HandlerFunc(s.updateAWFactor)))
 
 	return s.securityHeaders(s.auth.Middleware(mux))
 }
@@ -183,13 +197,25 @@ func (s *Server) base(r *http.Request) pageData {
 		nav = ""
 	}
 	return pageData{
-		Nav:     nav,
-		User:    auth.UserFrom(r),
-		CSRF:    auth.CSRF(r),
-		Version: s.version,
-		Flash:   r.URL.Query().Get("ok"),
-		Error:   r.URL.Query().Get("err"),
+		Nav:      nav,
+		User:     auth.UserFrom(r),
+		CSRF:     auth.CSRF(r),
+		Version:  s.version,
+		AWFactor: s.awMinutes(),
+		Flash:    r.URL.Query().Get("ok"),
+		Error:    r.URL.Query().Get("err"),
 	}
+}
+
+// awMinutes reads the configured conversion. A database error must not break
+// rendering, so it falls back to the documented default.
+func (s *Server) awMinutes() float64 {
+	factor, err := s.store.AWMinutes()
+	if err != nil {
+		s.logger.Printf("load AW factor: %v", err)
+		return timer.DefaultMinutesPerAW
+	}
+	return factor
 }
 
 func (s *Server) render(w http.ResponseWriter, name string, data pageData) {
@@ -522,9 +548,9 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusBadRequest, "Ungültige Formulardaten")
 		return
 	}
-	planned, err := timer.ParseAW(r.FormValue("aw"))
+	planned, err := timer.ParseAW(r.FormValue("aw"), s.awMinutes())
 	if err != nil {
-		http.Redirect(w, r, "/?err=Soll+in+AW+angeben+(10+AW+%3D+1+Stunde).", http.StatusSeeOther)
+		http.Redirect(w, r, "/?err=Soll+in+AW+angeben+(Umrechnung+im+Adminbereich+einstellbar).", http.StatusSeeOther)
 		return
 	}
 	assigneeID, err := strconv.ParseInt(strings.TrimSpace(r.FormValue("assignee_id")), 10, 64)
@@ -910,15 +936,16 @@ func (s *Server) reportCSV(w http.ResponseWriter, r *http.Request) {
 
 	cw := csv.NewWriter(w)
 	cw.Comma = ';'
+	factor := s.awMinutes()
 	rows := [][]string{
 		{"Auftrag", csvSafe(rep.Title)},
 		{"Abgeschlossen", timer.DateTime(rep.CreatedAt)},
 		{"Soll (Minuten)", strconv.FormatInt(rep.PlannedMinutes, 10)},
-		{"Soll (AW)", timer.AWFromMinutes(rep.PlannedMinutes)},
+		{"Soll (AW)", timer.AWFromMinutes(rep.PlannedMinutes, factor)},
 		{"Ist (Sekunden)", strconv.FormatInt(rep.ActualSeconds, 10)},
-		{"Ist (AW)", timer.AWFromSeconds(rep.ActualSeconds)},
+		{"Ist (AW)", timer.AWFromSeconds(rep.ActualSeconds, factor)},
 		{"Abweichung (Sekunden)", strconv.FormatInt(rep.DeviationSeconds, 10)},
-		{"Abweichung (AW)", timer.AWFromSeconds(rep.DeviationSeconds)},
+		{"Abweichung (AW)", timer.AWFromSeconds(rep.DeviationSeconds, factor)},
 		{"Abweichung (Prozent)", fmt.Sprintf("%.1f", rep.DeviationPercent)},
 		{"Notiz", csvSafe(rep.Notes)},
 		{},
@@ -948,6 +975,21 @@ func (s *Server) admin(w http.ResponseWriter, r *http.Request) {
 	data.Users = users
 	data.TaskTemplates = templates
 	s.render(w, "admin.html", data)
+}
+
+func (s *Server) updateAWFactor(w http.ResponseWriter, r *http.Request) {
+	raw := strings.ReplaceAll(strings.TrimSpace(r.FormValue("minutes_per_aw")), ",", ".")
+	factor, err := strconv.ParseFloat(raw, 64)
+	if err != nil || math.IsNaN(factor) || math.IsInf(factor, 0) || factor <= 0 || factor > 60 {
+		http.Redirect(w, r, "/admin?err=AW-Faktor+gr%C3%B6%C3%9Fer+als+0+und+h%C3%B6chstens+60+Minuten+angeben.", http.StatusSeeOther)
+		return
+	}
+	if err := s.store.SetAWMinutes(factor); err != nil {
+		s.logger.Printf("save AW factor: %v", err)
+		http.Redirect(w, r, "/admin?err=AW-Faktor+konnte+nicht+gespeichert+werden.", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/admin?ok=AW-Faktor+gespeichert.", http.StatusSeeOther)
 }
 
 func (s *Server) createTaskTemplate(w http.ResponseWriter, r *http.Request) {

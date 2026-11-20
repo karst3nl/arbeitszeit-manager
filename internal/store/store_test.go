@@ -156,6 +156,31 @@ func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 	}
 }
 
+func TestAWMinutesSetting(t *testing.T) {
+	s := testStore(t)
+
+	factor, err := s.AWMinutes()
+	if err != nil || factor != 6 {
+		t.Fatalf("default AW factor: %v, %v", factor, err)
+	}
+	if err := s.SetAWMinutes(7.5); err != nil {
+		t.Fatalf("save AW factor: %v", err)
+	}
+	factor, err = s.AWMinutes()
+	if err != nil || factor != 7.5 {
+		t.Fatalf("saved AW factor: %v, %v", factor, err)
+	}
+
+	// An invalid stored value falls back instead of breaking every page.
+	if _, err := s.db.Exec(`UPDATE settings SET value = 'nope' WHERE key = 'aw_minutes'`); err != nil {
+		t.Fatal(err)
+	}
+	factor, err = s.AWMinutes()
+	if err != nil || factor != 6 {
+		t.Fatalf("fallback AW factor: %v, %v", factor, err)
+	}
+}
+
 func rewindOpenSegment(t *testing.T, s *Store, seconds int64) {
 	t.Helper()
 	_, err := s.db.Exec(`UPDATE time_segments SET start_at = start_at - ? WHERE end_at IS NULL`, seconds)
