@@ -209,6 +209,52 @@ func TestFullOrderLifecycle(t *testing.T) {
 	}
 }
 
+func TestAdminTaskTemplatesAndOrderDropdown(t *testing.T) {
+	ts, client, csrf := setup(t)
+	base := ts.URL
+
+	body := get(t, client, base+"/admin")
+	if !strings.Contains(body, "Aufgaben-Vorlagen") || !strings.Contains(body, "Noch keine Vorlagen angelegt.") {
+		t.Fatalf("admin page missing template section: %s", body)
+	}
+
+	post(t, client, base+"/admin/task-templates", url.Values{
+		"csrf": {csrf}, "title": {"Konzeption"}, "planned": {"60"},
+	})
+	body = get(t, client, base+"/")
+	if !strings.Contains(body, `<option value="1">Konzeption (60 min)</option>`) {
+		t.Fatalf("template missing in dropdown: %s", body)
+	}
+
+	body = post(t, client, base+"/orders", url.Values{
+		"csrf": {csrf}, "title": {"Vorlagen-Auftrag"}, "planned": {"0"}, "template_id": {"1"},
+	})
+	if !strings.Contains(body, "Konzeption") {
+		t.Fatalf("template task not copied into order: %s", body)
+	}
+
+	mia, miaCSRF := loginAs(t, base, "mia")
+	if got := postStatus(t, mia, base+"/admin/task-templates", url.Values{
+		"csrf": {miaCSRF}, "title": {"Schmuggel"}, "planned": {"5"},
+	}); got != http.StatusForbidden {
+		t.Fatalf("non-admin created a template: %d", got)
+	}
+	if got := postStatus(t, mia, base+"/admin/task-templates/1/delete", url.Values{
+		"csrf": {miaCSRF},
+	}); got != http.StatusForbidden {
+		t.Fatalf("non-admin deleted a template: %d", got)
+	}
+
+	body = post(t, client, base+"/admin/task-templates/1/delete", url.Values{"csrf": {csrf}})
+	if !strings.Contains(body, "Nutzer verwalten") {
+		t.Fatalf("delete did not return to admin page: %s", body)
+	}
+	body = get(t, client, base+"/")
+	if strings.Contains(body, "Konzeption (60 min)") {
+		t.Fatal("deleted template is still in the dropdown")
+	}
+}
+
 func TestUserCanClaimUnassignedOrder(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL

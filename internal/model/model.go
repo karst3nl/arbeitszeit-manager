@@ -73,6 +73,15 @@ type Task struct {
 	Done           bool
 }
 
+// TaskTemplate is a reusable task maintained by an admin. Selecting one when
+// creating an order adds a copy to that order.
+type TaskTemplate struct {
+	ID             int64
+	Title          string
+	PlannedMinutes int64
+	CreatedAt      int64
+}
+
 // Report is the result of an order evaluation.
 type Report struct {
 	OrderID          int64

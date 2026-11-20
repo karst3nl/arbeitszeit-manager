@@ -19,6 +19,15 @@
             <input name="planned" type="number" min="0" max="60000" value="0" required>
             <small class="muted">0 = Summe der Aufgaben als Soll verwenden</small>
           </label>
+          <label>Aufgabe aus Vorlage (optional)
+            <select name="template_id">
+              <option value="0">— keine —</option>
+              {{range .TaskTemplates}}
+                <option value="{{.ID}}">{{.Title}} ({{.PlannedMinutes}} min)</option>
+              {{end}}
+            </select>
+            <small class="muted">Die gewählte Aufgabe wird dem Auftrag sofort hinzugefügt.</small>
+          </label>
         </div>
         <button type="submit">Auftrag erstellen</button>
       </form>

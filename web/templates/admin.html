@@ -29,6 +29,43 @@
         <button type="submit">Nutzer anlegen</button>
       </form>
     </article>
+
+    <article>
+      <h2>Aufgaben-Vorlagen</h2>
+      <p class="muted">Stehen beim Anlegen eines Auftrags im Dropdown zur Auswahl.</p>
+      <form method="post" action="/admin/task-templates">
+        {{template "csrf" .}}
+        <label>Bezeichnung
+          <input name="title" required maxlength="200" placeholder="z. B. Konzeption">
+        </label>
+        <label>Geplante Minuten
+          <input type="number" name="planned" min="0" max="60000" value="30" required>
+        </label>
+        <button type="submit" class="secondary">Vorlage anlegen</button>
+      </form>
+      {{if .TaskTemplates}}
+        <table>
+          <thead><tr><th>Aufgabe</th><th>Min.</th><th></th></tr></thead>
+          <tbody>
+            {{range .TaskTemplates}}
+              <tr>
+                <td>{{.Title}}</td>
+                <td>{{.PlannedMinutes}}</td>
+                <td>
+                  <form method="post" action="/admin/task-templates/{{.ID}}/delete" class="inline"
+                        onsubmit="return confirm('Vorlage wirklich löschen?');">
+                    {{template "csrf" $}}
+                    <button type="submit" class="outline secondary">Löschen</button>
+                  </form>
+                </td>
+              </tr>
+            {{end}}
+          </tbody>
+        </table>
+      {{else}}
+        <p class="muted">Noch keine Vorlagen angelegt.</p>
+      {{end}}
+    </article>
   </aside>
 
   <div class="col-main">

@@ -39,12 +39,13 @@ type pageData struct {
 	Error   string
 	Version string
 
-	Orders      []model.Order
-	Order       *model.Order
-	Tasks       []model.Task
-	TaskMinutes int64
-	Users       []model.User
-	Report      *model.Report
+	Orders        []model.Order
+	Order         *model.Order
+	Tasks         []model.Task
+	TaskMinutes   int64
+	TaskTemplates []model.TaskTemplate
+	Users         []model.User
+	Report        *model.Report
 
 	Elapsed   int64
 	Delta     int64
@@ -120,6 +121,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /admin/users", s.auth.RequireAdmin(http.HandlerFunc(s.createUser)))
 	mux.Handle("POST /admin/users/{id}/active", s.auth.RequireAdmin(http.HandlerFunc(s.setUserActive)))
 	mux.Handle("POST /admin/users/{id}/password", s.auth.RequireAdmin(http.HandlerFunc(s.resetPassword)))
+	mux.Handle("POST /admin/task-templates", s.auth.RequireAdmin(http.HandlerFunc(s.createTaskTemplate)))
+	mux.Handle("POST /admin/task-templates/{id}/delete", s.auth.RequireAdmin(http.HandlerFunc(s.deleteTaskTemplate)))
 
 	return s.securityHeaders(s.auth.Middleware(mux))
 }
@@ -296,9 +299,15 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusInternalServerError, "Aufträge konnten nicht geladen werden")
 		return
 	}
+	templates, err := s.store.TaskTemplates()
+	if err != nil {
+		s.fail(w, http.StatusInternalServerError, "Aufgaben-Vorlagen konnten nicht geladen werden")
+		return
+	}
 	data := s.base(r)
 	data.Title = "Arbeitsaufträge"
 	data.Orders = orders
+	data.TaskTemplates = templates
 	s.render(w, "dashboard.html", data)
 }
 
@@ -330,7 +339,17 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/?err=Soll-Zeit+muss+zwischen+0+und+60000+Minuten+liegen.", http.StatusSeeOther)
 		return
 	}
-	id, err := s.store.CreateOrder(title, r.FormValue("description"), planned, auth.UserFrom(r).ID)
+	templateID, _ := strconv.ParseInt(r.FormValue("template_id"), 10, 64)
+	var id int64
+	if templateID > 0 {
+		id, err = s.store.CreateOrderFromTemplate(title, r.FormValue("description"), planned, auth.UserFrom(r).ID, templateID)
+		if errors.Is(err, store.ErrNotFound) {
+			http.Redirect(w, r, "/?err=Ausgew%C3%A4hlte+Aufgabe+nicht+mehr+vorhanden.", http.StatusSeeOther)
+			return
+		}
+	} else {
+		id, err = s.store.CreateOrder(title, r.FormValue("description"), planned, auth.UserFrom(r).ID)
+	}
 	if err != nil {
 		s.fail(w, http.StatusInternalServerError, "Auftrag konnte nicht erstellt werden")
 		return
@@ -735,10 +754,47 @@ func (s *Server) admin(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusInternalServerError, "Nutzer konnten nicht geladen werden")
 		return
 	}
+	templates, err := s.store.TaskTemplates()
+	if err != nil {
+		s.fail(w, http.StatusInternalServerError, "Aufgaben-Vorlagen konnten nicht geladen werden")
+		return
+	}
 	data := s.base(r)
 	data.Title = "Nutzer verwalten"
 	data.Users = users
+	data.TaskTemplates = templates
 	s.render(w, "admin.html", data)
+}
+
+func (s *Server) createTaskTemplate(w http.ResponseWriter, r *http.Request) {
+	title := strings.TrimSpace(r.FormValue("title"))
+	planned, err := strconv.ParseInt(r.FormValue("planned"), 10, 64)
+	if title == "" || err != nil || planned < 0 || planned > 60000 {
+		http.Redirect(w, r, "/admin?err=Bezeichnung+und+geplante+Minuten+(0+bis+60000)+erforderlich.", http.StatusSeeOther)
+		return
+	}
+	if _, err := s.store.CreateTaskTemplate(title, planned); err != nil {
+		http.Redirect(w, r, "/admin?err=Aufgabe+mit+diesem+Namen+existiert+bereits.", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/admin?ok=Aufgaben-Vorlage+angelegt.", http.StatusSeeOther)
+}
+
+func (s *Server) deleteTaskTemplate(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r, "id")
+	if !ok {
+		s.fail(w, http.StatusBadRequest, "Ungültige Vorlagennummer")
+		return
+	}
+	if err := s.store.DeleteTaskTemplate(id); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			s.fail(w, http.StatusNotFound, "Vorlage nicht gefunden")
+			return
+		}
+		s.fail(w, http.StatusInternalServerError, "Vorlage konnte nicht gelöscht werden")
+		return
+	}
+	http.Redirect(w, r, "/admin?ok=Aufgaben-Vorlage+gel%C3%B6scht.", http.StatusSeeOther)
 }
 
 func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {

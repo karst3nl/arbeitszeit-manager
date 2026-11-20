@@ -88,6 +88,64 @@ func TestOrderSollMinutes(t *testing.T) {
 	}
 }
 
+func TestTaskTemplatesAndOrderCreation(t *testing.T) {
+	s := testStore(t)
+	templateID, err := s.CreateTaskTemplate("Konzeption", 60)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CreateTaskTemplate("Umsetzung", 120); err != nil {
+		t.Fatal(err)
+	}
+	templates, err := s.TaskTemplates()
+	if err != nil || len(templates) != 2 {
+		t.Fatalf("templates: %d, %v", len(templates), err)
+	}
+	if templates[0].Title != "Konzeption" || templates[0].PlannedMinutes != 60 {
+		t.Fatalf("unexpected template: %+v", templates[0])
+	}
+
+	orderID, err := s.CreateOrderFromTemplate("Kunde", "", 0, 1, templateID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tasks, err := s.Tasks(orderID)
+	if err != nil || len(tasks) != 1 {
+		t.Fatalf("copied tasks: %d, %v", len(tasks), err)
+	}
+	if tasks[0].Title != "Konzeption" || tasks[0].PlannedMinutes != 60 {
+		t.Fatalf("unexpected copied task: %+v", tasks[0])
+	}
+	o, err := s.Order(orderID)
+	if err != nil || o.PlannedMinutes != 60 {
+		t.Fatalf("order Soll from template: %+v, %v", o, err)
+	}
+
+	before, err := s.Orders()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CreateOrderFromTemplate("Fehler", "", 0, 1, 999); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("missing template: %v", err)
+	}
+	after, err := s.Orders()
+	if err != nil || len(after) != len(before) {
+		t.Fatalf("half-created order left behind: %d -> %d, %v", len(before), len(after), err)
+	}
+
+	if err := s.DeleteTaskTemplate(templateID); err != nil {
+		t.Fatal(err)
+	}
+	templates, err = s.TaskTemplates()
+	if err != nil || len(templates) != 1 {
+		t.Fatalf("templates after delete: %d, %v", len(templates), err)
+	}
+	tasks, err = s.Tasks(orderID)
+	if err != nil || len(tasks) != 1 {
+		t.Fatalf("copied task should survive template deletion: %d, %v", len(tasks), err)
+	}
+}
+
 func rewindOpenSegment(t *testing.T, s *Store, seconds int64) {
 	t.Helper()
 	_, err := s.db.Exec(`UPDATE time_segments SET start_at = start_at - ? WHERE end_at IS NULL`, seconds)

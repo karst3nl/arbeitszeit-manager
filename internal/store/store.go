@@ -546,6 +546,93 @@ func (s *Store) DeleteTask(orderID, id int64) error {
 	return nil
 }
 
+// --- Task templates --------------------------------------------------------
+
+// TaskTemplates returns the admin-maintained templates for the order form.
+func (s *Store) TaskTemplates() ([]model.TaskTemplate, error) {
+	rows, err := s.db.Query(`SELECT id, title, planned_minutes, created_at
+		FROM task_templates ORDER BY title COLLATE NOCASE, id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var templates []model.TaskTemplate
+	for rows.Next() {
+		var t model.TaskTemplate
+		if err := rows.Scan(&t.ID, &t.Title, &t.PlannedMinutes, &t.CreatedAt); err != nil {
+			return nil, err
+		}
+		templates = append(templates, t)
+	}
+	return templates, rows.Err()
+}
+
+// CreateTaskTemplate adds a reusable task. Titles are unique to keep the
+// dropdown readable.
+func (s *Store) CreateTaskTemplate(title string, plannedMinutes int64) (int64, error) {
+	res, err := s.db.Exec(`INSERT INTO task_templates(title, planned_minutes, created_at) VALUES(?, ?, ?)`,
+		title, plannedMinutes, time.Now().Unix())
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+// DeleteTaskTemplate removes a template. Existing orders are unaffected
+// because they hold their own copy of the task.
+func (s *Store) DeleteTaskTemplate(id int64) error {
+	res, err := s.db.Exec(`DELETE FROM task_templates WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// CreateOrderFromTemplate creates an order and copies a template's task into
+// it in one transaction, so a missing template never leaves a half-created
+// order behind.
+func (s *Store) CreateOrderFromTemplate(title, description string, plannedMinutes, ownerID, templateID int64) (int64, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	var taskTitle string
+	var taskMinutes int64
+	err = tx.QueryRow(`SELECT title, planned_minutes FROM task_templates WHERE id = ?`, templateID).
+		Scan(&taskTitle, &taskMinutes)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, ErrNotFound
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	res, err := tx.Exec(`INSERT INTO work_orders(title, description, planned_minutes, owner_id, created_at)
+		VALUES(?, ?, ?, ?, ?)`, title, description, plannedMinutes, ownerID, time.Now().Unix())
+	if err != nil {
+		return 0, err
+	}
+	orderID, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	if _, err := tx.Exec(`INSERT INTO tasks(work_order_id, title, planned_minutes, position)
+		VALUES(?, ?, ?, 0)`, orderID, taskTitle, taskMinutes); err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return orderID, nil
+}
+
 // --- Timer -----------------------------------------------------------------
 
 func changed(res sql.Result) bool {

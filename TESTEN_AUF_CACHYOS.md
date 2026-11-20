@@ -155,7 +155,11 @@ echo "CSRF: $CSRF"
 curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'login: %{http_code}\n' \
   -d "csrf=$CSRF&username=admin&password=testpass123" "$BASE/login"
 
-# Auftrag anlegen
+# Aufgaben-Vorlage anlegen (nur Admin)
+curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'vorlage: %{http_code}\n' \
+  -d "csrf=$CSRF&title=Konzeption&planned=60" "$BASE/admin/task-templates"
+
+# Auftrag anlegen (optional mit Vorlage: &template_id=1)
 curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'auftrag: %{http_code}\n' \
   -d "csrf=$CSRF&title=Smoke-Test&planned=90" "$BASE/orders"
 
@@ -184,7 +188,7 @@ normal, dann wird nur die Zielseite nicht mitgeladen.
 
 1. <http://127.0.0.1:8080/login> öffnen
 2. Anmelden mit `admin` / `testpass123`
-3. Auftrag mit Soll-Zeit anlegen (`0` = Summe der Aufgaben) → Aufgabe mit geplanten Minuten → Timer Start/Pause/Weiter/Ende
+3. Unter **Nutzer** eine Aufgaben-Vorlage anlegen, dann einen Auftrag mit Soll-Zeit anlegen (`0` = Summe der Aufgaben) und optional die Vorlage aus dem Dropdown wählen → Aufgabe mit geplanten Minuten → Timer Start/Pause/Weiter/Ende
 4. „Auswertung ansehen" und den CSV-Export prüfen
 5. Oben rechts **Konto** (Passwort ändern) und **Nutzer** ( Admin-Seite) testen
 
