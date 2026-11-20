@@ -16,6 +16,7 @@ Schlanke Webapp für Arbeitsaufträge mit geplanten Zeiten, einem Timer für die
 - **Auswertung** nach Abschluss: Soll, Ist und Abweichung in Minuten und Prozent, Balkenvergleich, Notiz und CSV-Export
 - **Mehrnutzerfähig** (mind. 6): Login, Rollen `admin` / `user`, Sessions, CSRF-Schutz; Nutzer können sich offene Aufträge selbst zuordnen, das eigene Passwort ändern und Admins können Passwörter zurücksetzen
 - **Rollenbasierte Startseite**: Admins sehen offene und in Bearbeitung befindliche Aufträge aller Nutzer sowie das Formular zum Anlegen neuer Aufträge; normale Nutzer sehen nur die ihnen zugewiesenen Aufträge
+- **Zählerleiste**: Offen / Läuft / Abgeschlossen mit anklickbaren Zählern zum Filtern; Zähler und Liste aktualisieren sich automatisch alle 30 Sekunden
 - **Pflege**: Aufträge löschen (nicht bei laufendem Timer), Übersicht aktualisiert sich automatisch alle 30 Sekunden
 - **Robust**: SQLite im WAL-Modus, Backup-Skript, Reboot-Recovery für hängende Timer
 - **Responsiv**: kompakte Ansicht fürs Smartphone, am Desktop automatisch eine App-Oberfläche mit fester Seitenleiste und Statusleiste – ohne separate App oder Umschalter

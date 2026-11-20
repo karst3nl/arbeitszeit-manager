@@ -44,8 +44,11 @@ type pageData struct {
 	OpenOrders    []model.Order
 	ActiveOrders  []model.Order
 	DoneOrders    []model.Order
-	MyOrders      []model.Order
-	MyDoneOrders  []model.Order
+	OrderFilter   string
+	CountAll      int
+	CountOpen     int
+	CountActive   int
+	CountDone     int
 	Order         *model.Order
 	Tasks         []model.Task
 	TaskMinutes   int64
@@ -316,41 +319,55 @@ func (s *Server) changeDisplayName(w http.ResponseWriter, r *http.Request) {
 
 // --- orders ----------------------------------------------------------------
 
-// orderGroups splits the visible orders by role. Admins manage the whole
-// team; normal users only work on orders assigned to them.
+// orderGroups splits the orders visible to the current user into the three
+// states shown in the summary bar: not started, in progress and done. Admins
+// see the whole team, normal users only orders assigned to them. The optional
+// filter keeps only one group while the counters always stay complete.
 func (s *Server) orderGroups(r *http.Request, data *pageData) error {
 	orders, err := s.store.Orders()
 	if err != nil {
 		return err
 	}
 	u := auth.UserFrom(r)
-	if u != nil && u.IsAdmin() {
-		for _, o := range orders {
-			switch {
-			case o.Done():
-				data.DoneOrders = append(data.DoneOrders, o)
-			case o.AssigneeID == 0:
-				data.OpenOrders = append(data.OpenOrders, o)
-			default:
-				data.ActiveOrders = append(data.ActiveOrders, o)
-			}
-		}
-		return nil
-	}
-	if u == nil {
-		return nil
-	}
 	for _, o := range orders {
-		if o.AssigneeID != u.ID {
+		if u == nil || (!u.IsAdmin() && o.AssigneeID != u.ID) {
 			continue
 		}
-		if o.Done() {
-			data.MyDoneOrders = append(data.MyDoneOrders, o)
-		} else {
-			data.MyOrders = append(data.MyOrders, o)
+		switch {
+		case o.Done():
+			data.DoneOrders = append(data.DoneOrders, o)
+		case o.TimerState == "running" || o.TimerState == "paused":
+			data.ActiveOrders = append(data.ActiveOrders, o)
+		default:
+			data.OpenOrders = append(data.OpenOrders, o)
 		}
 	}
+	data.CountOpen = len(data.OpenOrders)
+	data.CountActive = len(data.ActiveOrders)
+	data.CountDone = len(data.DoneOrders)
+	data.CountAll = data.CountOpen + data.CountActive + data.CountDone
+
+	switch data.OrderFilter {
+	case "open":
+		data.ActiveOrders, data.DoneOrders = nil, nil
+	case "active":
+		data.OpenOrders, data.DoneOrders = nil, nil
+	case "done":
+		data.OpenOrders, data.ActiveOrders = nil, nil
+	}
 	return nil
+}
+
+// orderFilter validates the filter query parameter so only known values reach
+// the templates.
+func orderFilter(r *http.Request) string {
+	filter := r.URL.Query().Get("filter")
+	switch filter {
+	case "open", "active", "done":
+		return filter
+	default:
+		return ""
+	}
 }
 
 func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
@@ -360,6 +377,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	data := s.base(r)
 	data.Title = "Arbeitsaufträge"
+	data.OrderFilter = orderFilter(r)
 	if auth.UserFrom(r).IsAdmin() {
 		templates, err := s.store.TaskTemplates()
 		if err != nil {
@@ -375,15 +393,16 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "dashboard.html", data)
 }
 
-// orderList renders only the cards so HTMX can refresh them every 30 seconds
-// without touching the create form.
+// orderList renders the summary bar and the cards so HTMX can refresh both
+// every 30 seconds without touching the create form.
 func (s *Server) orderList(w http.ResponseWriter, r *http.Request) {
 	data := s.base(r)
+	data.OrderFilter = orderFilter(r)
 	if err := s.orderGroups(r, &data); err != nil {
 		s.fail(w, http.StatusInternalServerError, "Aufträge konnten nicht geladen werden")
 		return
 	}
-	s.render(w, "order-list", data)
+	s.render(w, "orders-view", data)
 }
 
 func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {

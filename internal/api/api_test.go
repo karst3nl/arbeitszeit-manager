@@ -229,11 +229,10 @@ func TestDashboardIsRoleSpecific(t *testing.T) {
 
 	mia, _ := loginAs(t, base, "mia")
 	body = get(t, mia, base+"/")
-	if strings.Contains(body, "Neuer Auftrag") || strings.Contains(body, "Offene Aufträge") ||
-		strings.Contains(body, "In Bearbeitung") {
-		t.Fatal("user dashboard shows admin controls or groups")
+	if strings.Contains(body, "Neuer Auftrag") {
+		t.Fatal("user dashboard shows the admin create form")
 	}
-	if !strings.Contains(body, "Meine Aufträge") || !strings.Contains(body, "Mia Auftrag") {
+	if !strings.Contains(body, "Hier siehst du ausschließlich") || !strings.Contains(body, "Mia Auftrag") {
 		t.Fatalf("user dashboard missing own order: %s", body)
 	}
 	for _, foreign := range []string{"Offener Auftrag", "Admin Auftrag"} {
@@ -247,6 +246,72 @@ func TestDashboardIsRoleSpecific(t *testing.T) {
 	if !strings.Contains(body, "Mia Auftrag") || strings.Contains(body, "Admin Auftrag") ||
 		strings.Contains(body, "Offener Auftrag") {
 		t.Fatalf("refresh fragment leaks foreign orders: %s", body)
+	}
+}
+
+func TestOrderSummaryCountersAndFilter(t *testing.T) {
+	ts, client, csrf := setup(t)
+	base := ts.URL
+
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Offen Nr.1"}, "plate": {"M-AB 1"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Laufend Nr.2"}, "plate": {"M-AB 2"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Fertig Nr.3"}, "plate": {"M-AB 3"}})
+	post(t, client, base+"/orders/2/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"2"}})
+	post(t, client, base+"/orders/3/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"2"}})
+	post(t, client, base+"/orders/2/timer/start", url.Values{"csrf": {csrf}})
+	post(t, client, base+"/orders/3/timer/start", url.Values{"csrf": {csrf}})
+	post(t, client, base+"/orders/3/timer/stop", url.Values{"csrf": {csrf}})
+
+	body := get(t, client, base+"/")
+	for _, want := range []string{
+		`data-count="all" data-value="3"`,
+		`data-count="open" data-value="1"`,
+		`data-count="active" data-value="1"`,
+		`data-count="done" data-value="1"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard missing counter %q: %s", want, body)
+		}
+	}
+
+	for _, tc := range []struct {
+		filter string
+		want   string
+		hidden []string
+	}{
+		{"open", "Offen Nr.1", []string{"Laufend Nr.2", "Fertig Nr.3"}},
+		{"active", "Laufend Nr.2", []string{"Offen Nr.1", "Fertig Nr.3"}},
+		{"done", "Fertig Nr.3", []string{"Offen Nr.1", "Laufend Nr.2"}},
+	} {
+		body = get(t, client, base+"/orders?filter="+tc.filter)
+		if !strings.Contains(body, tc.want) {
+			t.Fatalf("filter %q missing %q: %s", tc.filter, tc.want, body)
+		}
+		for _, absent := range tc.hidden {
+			if strings.Contains(body, absent) {
+				t.Fatalf("filter %q leaked %q: %s", tc.filter, absent, body)
+			}
+		}
+		// Filtering must not change the counters themselves.
+		if !strings.Contains(body, `data-count="all" data-value="3"`) {
+			t.Fatalf("filter %q changed the counters: %s", tc.filter, body)
+		}
+	}
+
+	mia, _ := loginAs(t, base, "mia")
+	body = get(t, mia, base+"/")
+	for _, want := range []string{
+		`data-count="all" data-value="2"`,
+		`data-count="open" data-value="0"`,
+		`data-count="active" data-value="1"`,
+		`data-count="done" data-value="1"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("user dashboard missing counter %q: %s", want, body)
+		}
+	}
+	if strings.Contains(body, "Offen Nr.1") {
+		t.Fatal("user dashboard shows an unassigned order")
 	}
 }
 

@@ -34,6 +34,40 @@ body { padding-bottom: 3rem; }
 
 .page-title { font-weight: 600; margin: 0 0 .75rem; }
 
+.order-summary { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0;
+  padding: .35rem .7rem;
+  font-size: .85rem;
+}
+.summary-chip[aria-pressed="true"] {
+  border-color: var(--pico-primary);
+  background: var(--pico-primary);
+  color: var(--pico-primary-inverse);
+}
+.summary-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  padding: .05rem .35rem;
+  border-radius: 1rem;
+  background: var(--pico-muted-border-color);
+  font-size: .8rem;
+}
+.summary-chip[aria-pressed="true"] .summary-count {
+  background: var(--pico-primary-inverse);
+  color: var(--pico-primary);
+}
+
+@media (max-width: 1099px) {
+  .order-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .summary-chip { justify-content: center; }
+}
+
 .flash, .error {
   padding: .75rem 1rem;
   border-radius: var(--pico-border-radius);

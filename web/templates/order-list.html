@@ -31,34 +31,47 @@
 {{end}}
 {{end}}
 
+{{define "order-summary"}}
+<div class="order-summary" role="group" aria-label="Aufträge nach Status filtern">
+  <button type="button" class="summary-chip" aria-pressed="{{if eq .OrderFilter ""}}true{{else}}false{{end}}"
+          hx-get="/orders" hx-target="#orders-view" hx-swap="innerHTML">
+    Alle <span class="summary-count" data-count="all" data-value="{{.CountAll}}">{{.CountAll}}</span>
+  </button>
+  <button type="button" class="summary-chip" aria-pressed="{{if eq .OrderFilter "open"}}true{{else}}false{{end}}"
+          hx-get="/orders?filter=open" hx-target="#orders-view" hx-swap="innerHTML">
+    Offen <span class="summary-count" data-count="open" data-value="{{.CountOpen}}">{{.CountOpen}}</span>
+  </button>
+  <button type="button" class="summary-chip" aria-pressed="{{if eq .OrderFilter "active"}}true{{else}}false{{end}}"
+          hx-get="/orders?filter=active" hx-target="#orders-view" hx-swap="innerHTML">
+    Läuft <span class="summary-count" data-count="active" data-value="{{.CountActive}}">{{.CountActive}}</span>
+  </button>
+  <button type="button" class="summary-chip" aria-pressed="{{if eq .OrderFilter "done"}}true{{else}}false{{end}}"
+          hx-get="/orders?filter=done" hx-target="#orders-view" hx-swap="innerHTML">
+    Abgeschlossen <span class="summary-count" data-count="done" data-value="{{.CountDone}}">{{.CountDone}}</span>
+  </button>
+</div>
+{{end}}
+
+{{define "orders-view"}}
+  {{template "order-summary" .}}
+  {{template "order-list" .}}
+{{end}}
+
 {{define "order-list"}}
-{{if .User.IsAdmin}}
   <section class="order-group">
-    <h2>Offene Aufträge <span class="count">{{len .OpenOrders}}</span></h2>
-    <p class="muted">Noch keiner Person zugewiesen.</p>
+    <h2>Offene Aufträge <span class="count">{{.CountOpen}}</span></h2>
+    <p class="muted">Noch nicht begonnen{{if .User.IsAdmin}} oder keiner Person zugewiesen{{end}}.</p>
     {{template "order-cards" .OpenOrders}}
   </section>
 
   <section class="order-group">
-    <h2>In Bearbeitung <span class="count">{{len .ActiveOrders}}</span></h2>
-    <p class="muted">Einem Nutzer zugewiesen und noch nicht abgeschlossen.</p>
+    <h2>In Bearbeitung <span class="count">{{.CountActive}}</span></h2>
+    <p class="muted">Timer läuft oder ist pausiert.</p>
     {{template "order-cards" .ActiveOrders}}
   </section>
 
-  <details class="order-group collapsed">
-    <summary>Abgeschlossen ({{len .DoneOrders}})</summary>
+  <details class="order-group collapsed"{{if eq .OrderFilter "done"}} open{{end}}>
+    <summary>Abgeschlossen ({{.CountDone}})</summary>
     {{template "order-cards" .DoneOrders}}
   </details>
-{{else}}
-  <section class="order-group">
-    <h2>Meine Aufträge <span class="count">{{len .MyOrders}}</span></h2>
-    <p class="muted">Dir zugewiesen und noch nicht abgeschlossen.</p>
-    {{template "order-cards" .MyOrders}}
-  </section>
-
-  <details class="order-group collapsed">
-    <summary>Meine abgeschlossenen Aufträge ({{len .MyDoneOrders}})</summary>
-    {{template "order-cards" .MyDoneOrders}}
-  </details>
-{{end}}
 {{end}}

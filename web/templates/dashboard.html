@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 {{template "header" .}}
+
 {{if .User.IsAdmin}}
   <div class="page-columns side-first compact-create">
     <aside class="col-side">
@@ -38,15 +39,15 @@
     </aside>
 
     <div class="col-main">
-      <div id="order-list" hx-get="/orders" hx-trigger="every 30s" hx-swap="innerHTML">
-        {{template "order-list" .}}
+      <div id="orders-view" hx-get="/orders?filter={{.OrderFilter}}" hx-trigger="every 30s" hx-swap="innerHTML">
+        {{template "orders-view" .}}
       </div>
     </div>
   </div>
 {{else}}
   <p class="muted page-intro">Hier siehst du ausschließlich die Aufträge, die dir zugewiesen sind.</p>
-  <div id="order-list" hx-get="/orders" hx-trigger="every 30s" hx-swap="innerHTML">
-    {{template "order-list" .}}
+  <div id="orders-view" hx-get="/orders?filter={{.OrderFilter}}" hx-trigger="every 30s" hx-swap="innerHTML">
+    {{template "orders-view" .}}
   </div>
 {{end}}
 {{template "footer" .}}
