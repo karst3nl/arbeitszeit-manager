@@ -33,6 +33,7 @@ type Server struct {
 
 type pageData struct {
 	Title   string
+	Nav     string
 	User    *model.User
 	CSRF    string
 	Flash   string
@@ -40,6 +41,11 @@ type pageData struct {
 	Version string
 
 	Orders        []model.Order
+	OpenOrders    []model.Order
+	ActiveOrders  []model.Order
+	DoneOrders    []model.Order
+	MyOrders      []model.Order
+	MyDoneOrders  []model.Order
 	Order         *model.Order
 	Tasks         []model.Task
 	TaskMinutes   int64
@@ -62,6 +68,13 @@ var templateFuncs = template.FuncMap{
 	"signed":  timer.SignedDuration,
 	"minutes": timer.Minutes,
 	"date":    timer.DateTime,
+	"upperFirst": func(s string) string {
+		if s == "" {
+			return "?"
+		}
+		r := []rune(s)
+		return strings.ToUpper(string(r[0]))
+	},
 	"pct": func(v float64) string {
 		return fmt.Sprintf("%+.1f %%", v)
 	},
@@ -141,7 +154,20 @@ func (s *Server) securityHeaders(next http.Handler) http.Handler {
 // --- helpers ---------------------------------------------------------------
 
 func (s *Server) base(r *http.Request) pageData {
+	path := r.URL.Path
+	nav := "orders"
+	switch {
+	case strings.HasPrefix(path, "/admin"):
+		nav = "admin"
+	case strings.HasPrefix(path, "/account"):
+		nav = "account"
+	case strings.HasPrefix(path, "/about"):
+		nav = "about"
+	case path == "/login":
+		nav = ""
+	}
 	return pageData{
+		Nav:     nav,
 		User:    auth.UserFrom(r),
 		CSRF:    auth.CSRF(r),
 		Version: s.version,
@@ -197,7 +223,9 @@ func (s *Server) loginPage(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
-	s.render(w, "login.html", s.base(r))
+	data := s.base(r)
+	data.Title = "Anmelden"
+	s.render(w, "login.html", data)
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
@@ -289,38 +317,73 @@ func (s *Server) changeDisplayName(w http.ResponseWriter, r *http.Request) {
 
 // --- orders ----------------------------------------------------------------
 
+// orderGroups splits the visible orders by role. Admins manage the whole
+// team; normal users only work on orders assigned to them.
+func (s *Server) orderGroups(r *http.Request, data *pageData) error {
+	orders, err := s.store.Orders()
+	if err != nil {
+		return err
+	}
+	u := auth.UserFrom(r)
+	if u != nil && u.IsAdmin() {
+		for _, o := range orders {
+			switch {
+			case o.Done():
+				data.DoneOrders = append(data.DoneOrders, o)
+			case o.AssigneeID == 0:
+				data.OpenOrders = append(data.OpenOrders, o)
+			default:
+				data.ActiveOrders = append(data.ActiveOrders, o)
+			}
+		}
+		return nil
+	}
+	if u == nil {
+		return nil
+	}
+	for _, o := range orders {
+		if o.AssigneeID != u.ID {
+			continue
+		}
+		if o.Done() {
+			data.MyDoneOrders = append(data.MyDoneOrders, o)
+		} else {
+			data.MyOrders = append(data.MyOrders, o)
+		}
+	}
+	return nil
+}
+
 func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		s.fail(w, http.StatusNotFound, "Nicht gefunden")
 		return
 	}
-	orders, err := s.store.Orders()
-	if err != nil {
+	data := s.base(r)
+	data.Title = "Arbeitsaufträge"
+	if auth.UserFrom(r).IsAdmin() {
+		templates, err := s.store.TaskTemplates()
+		if err != nil {
+			s.fail(w, http.StatusInternalServerError, "Aufgaben-Vorlagen konnten nicht geladen werden")
+			return
+		}
+		data.TaskTemplates = templates
+	}
+	if err := s.orderGroups(r, &data); err != nil {
 		s.fail(w, http.StatusInternalServerError, "Aufträge konnten nicht geladen werden")
 		return
 	}
-	templates, err := s.store.TaskTemplates()
-	if err != nil {
-		s.fail(w, http.StatusInternalServerError, "Aufgaben-Vorlagen konnten nicht geladen werden")
-		return
-	}
-	data := s.base(r)
-	data.Title = "Arbeitsaufträge"
-	data.Orders = orders
-	data.TaskTemplates = templates
 	s.render(w, "dashboard.html", data)
 }
 
 // orderList renders only the cards so HTMX can refresh them every 30 seconds
 // without touching the create form.
 func (s *Server) orderList(w http.ResponseWriter, r *http.Request) {
-	orders, err := s.store.Orders()
-	if err != nil {
+	data := s.base(r)
+	if err := s.orderGroups(r, &data); err != nil {
 		s.fail(w, http.StatusInternalServerError, "Aufträge konnten nicht geladen werden")
 		return
 	}
-	data := s.base(r)
-	data.Orders = orders
 	s.render(w, "order-list", data)
 }
 

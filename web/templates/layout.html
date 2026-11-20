@@ -11,7 +11,7 @@
   <script src="/static/vendor/alpine.min.js?v={{.Version}}" defer></script>
   <script src="/static/tick.js?v={{.Version}}" defer></script>
 </head>
-<body>
+<body class="{{if .User}}authenticated{{else}}anonymous{{end}}">
   <header class="topbar">
     <nav class="container">
       <ul>
@@ -33,14 +33,66 @@
       </ul>
     </nav>
   </header>
-  <main class="container">
-    {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
-    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+
+  {{if .User}}
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="sidebar-brand" href="/">⏱ <span>Arbeitszeit</span></a>
+      <nav class="sidebar-nav">
+        <a href="/" data-nav="orders" {{if eq .Nav "orders"}}class="active"{{end}}>
+          <span class="nav-icon">☰</span>Aufträge</a>
+        {{if .User.IsAdmin}}
+          <a href="/admin" data-nav="admin" {{if eq .Nav "admin"}}class="active"{{end}}>
+            <span class="nav-icon">♙</span>Nutzer &amp; Vorlagen</a>
+        {{end}}
+        <a href="/account" data-nav="account" {{if eq .Nav "account"}}class="active"{{end}}>
+          <span class="nav-icon">◎</span>Konto</a>
+        <a href="/about" data-nav="about" {{if eq .Nav "about"}}class="active"{{end}}>
+          <span class="nav-icon">ⓘ</span>Über</a>
+      </nav>
+      <div class="sidebar-user">
+        <span class="avatar">{{upperFirst .User.DisplayName}}</span>
+        <div>
+          <strong>{{.User.DisplayName}}</strong>
+          <span class="muted">{{if .User.IsAdmin}}Administrator{{else}}Nutzer{{end}}</span>
+        </div>
+        <form method="post" action="/logout" class="inline">
+          {{template "csrf" .}}
+          <button type="submit" class="outline secondary">Abmelden</button>
+        </form>
+      </div>
+    </aside>
+
+    <header class="app-header">
+      <div class="breadcrumb">Arbeitszeit <span>/</span> <strong>{{.Title}}</strong></div>
+      <span class="badge {{if .User.IsAdmin}}done{{else}}open{{end}}">
+        {{if .User.IsAdmin}}Admin{{else}}Nutzer{{end}}
+      </span>
+    </header>
+
+    <main class="app-main">
+      {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
+      {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+  {{else}}
+    <main class="app-main login-main">
+      {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
+      {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+  {{end}}
 {{end}}
 
 {{define "footer"}}
-  </main>
-  <footer class="container muted">
+    {{if .User}}
+    </main>
+    <footer class="app-status">
+      <span>Arbeitszeit-Manager · Freie Software unter AGPL-3.0</span>
+      <span><a href="/about">Über</a>{{if .Version}} · v{{.Version}}{{end}}</span>
+    </footer>
+  </div>
+    {{else}}
+    </main>
+    {{end}}
+
+  <footer class="container page-footer muted">
     <a href="/about">Arbeitszeit-Manager</a> · Freie Software unter AGPL-3.0 ·
     <a href="https://github.com/karst3nl/arbeitszeit-manager">Quelltext</a>
     {{if .Version}} · v{{.Version}}{{end}}

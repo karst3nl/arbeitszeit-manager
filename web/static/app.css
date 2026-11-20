@@ -17,6 +17,17 @@ body { padding-bottom: 3rem; }
 .topbar form.inline { margin: 0; }
 .topbar button { padding: .35rem .7rem; font-size: .85rem; }
 
+.app-main {
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+  padding-inline: var(--pico-spacing);
+}
+
+/* Desktop-only chrome; hidden below the breakpoint so the phone view is
+   exactly the same as before. */
+.sidebar, .app-header, .app-status { display: none; }
+
 .container { max-width: 960px; }
 
 .muted { color: var(--pico-muted-color); font-size: .9rem; }
@@ -97,7 +108,7 @@ body { padding-bottom: 3rem; }
 
 .login-card { max-width: 420px; margin: 3rem auto; }
 
-footer.container { padding-top: 1.5rem; border-top: 1px solid var(--pico-muted-border-color); }
+footer.container, footer.page-footer { padding-top: 1.5rem; border-top: 1px solid var(--pico-muted-border-color); }
 
 @media (max-width: 600px) {
   .task-form { grid-template-columns: auto 1fr 80px; }
@@ -106,35 +117,179 @@ footer.container { padding-top: 1.5rem; border-top: 1px solid var(--pico-muted-b
   .timer-actions button, .timer-actions .button { width: 100%; }
 }
 
-/* Desktop: same pages, more room. Below this breakpoint nothing changes, so
-   the smartphone layout stays exactly as it is. */
+/* Desktop: application frame with sidebar, title bar and status bar. The
+   phone layout above is untouched because everything below is gated by the
+   same 1100 px breakpoint used before. */
 @media (min-width: 1100px) {
+  body.authenticated {
+    height: 100vh;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+  body.authenticated .topbar,
+  body.authenticated .page-footer { display: none; }
+
   .container { max-width: 1360px; }
 
-  .topbar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
+  .app-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    grid-template-rows: 58px minmax(0, 1fr) 32px;
+    height: 100vh;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    grid-column: 1;
+    grid-row: 1 / -1;
+    padding: 1.1rem .8rem 1rem;
+    background: var(--pico-card-background-color, #f7f7f8);
+    border-right: 1px solid var(--pico-muted-border-color);
+    overflow-y: auto;
+  }
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: 0 .6rem 1.1rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 1px solid var(--pico-muted-border-color);
+  }
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+    padding-top: 1rem;
+  }
+  .sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: .6rem .7rem;
+    border-radius: .4rem;
+    color: var(--pico-color);
+    text-decoration: none;
+    font-size: .95rem;
+  }
+  .sidebar-nav a:hover { background: color-mix(in srgb, var(--pico-primary) 10%, transparent); }
+  .sidebar-nav a.active {
+    background: var(--pico-primary);
+    color: var(--pico-primary-inverse);
+    font-weight: 600;
+  }
+  .nav-icon { width: 1.2rem; text-align: center; opacity: .85; }
+
+  .sidebar-user {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .15rem;
+    margin-top: auto;
+    padding: 1rem .6rem 0;
+    border-top: 1px solid var(--pico-muted-border-color);
+  }
+  .sidebar-user strong { font-size: .9rem; }
+  .sidebar-user .muted { font-size: .78rem; }
+  .sidebar-user form { margin-top: .5rem; width: 100%; }
+  .sidebar-user button { width: 100%; padding: .4rem .6rem; font-size: .8rem; }
+  .avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 50%;
+    background: var(--pico-primary);
+    color: var(--pico-primary-inverse);
+    font-weight: 700;
+    margin-bottom: .4rem;
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    grid-column: 2;
+    grid-row: 1;
+    padding: 0 1.75rem;
+    background: var(--pico-background-color);
+    border-bottom: 1px solid var(--pico-muted-border-color);
+  }
+  .breadcrumb { font-size: .9rem; color: var(--pico-muted-color); }
+  .breadcrumb span { margin: 0 .45rem; }
+  .breadcrumb strong { color: var(--pico-color); font-weight: 600; }
+
+  .app-main {
+    grid-column: 2;
+    grid-row: 2;
+    max-width: none;
+    margin: 0;
+    padding: 1.5rem 1.75rem 2.5rem;
+    overflow-y: auto;
+    background: color-mix(in srgb, var(--pico-muted-border-color) 10%, var(--pico-background-color));
+  }
+  .app-main > h1 { margin-top: 0; font-size: 1.7rem; }
+  .app-main > article,
+  .app-main > section,
+  .app-main .col-main > article,
+  .app-main .col-side > article,
+  .order-card { background: var(--pico-background-color); }
+  .order-group {
+    padding: 1rem 1.25rem 1.25rem;
+    border-radius: var(--pico-border-radius);
+    border: 1px solid var(--pico-muted-border-color);
+    margin-bottom: 1.25rem;
     background: var(--pico-background-color);
   }
+  .order-group h2 { margin-top: 0; font-size: 1.1rem; }
+  .order-group h2 .count {
+    display: inline-block;
+    min-width: 1.5rem;
+    text-align: center;
+    padding: .05rem .4rem;
+    border-radius: 1rem;
+    background: var(--pico-muted-border-color);
+    font-size: .8rem;
+    vertical-align: .1rem;
+  }
+  .order-group > .muted:first-of-type { margin-top: -.4rem; }
+  .order-group.collapsed > summary { cursor: pointer; font-weight: 600; }
+
+  .app-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    grid-column: 2;
+    grid-row: 3;
+    padding: 0 1.75rem;
+    background: var(--pico-background-color);
+    border-top: 1px solid var(--pico-muted-border-color);
+    font-size: .75rem;
+    color: var(--pico-muted-color);
+  }
+  .app-status a { color: inherit; }
 
   .page-columns {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;
-    gap: 2rem;
+    gap: 1.5rem;
     align-items: start;
   }
   .page-columns.side-first { grid-template-columns: 320px minmax(0, 1fr); }
   .page-columns.even { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .page-columns .col-side { position: sticky; top: 5rem; }
+  .page-columns .col-side { position: sticky; top: 0; }
   .page-columns article { margin-bottom: 0; }
-  .page-columns .col-side > * + * { margin-top: 1.5rem; }
+  .page-columns .col-side > * + * { margin-top: 1.25rem; }
 
   .timer {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: .5rem 1.5rem;
     align-items: center;
+    margin-bottom: 1.25rem;
   }
   .timer > .error { grid-column: 1 / -1; grid-row: 1; }
   .timer-main { grid-column: 1; grid-row: 2; }

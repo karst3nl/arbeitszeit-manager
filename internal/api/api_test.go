@@ -209,6 +209,47 @@ func TestFullOrderLifecycle(t *testing.T) {
 	}
 }
 
+func TestDashboardIsRoleSpecific(t *testing.T) {
+	ts, client, csrf := setup(t)
+	base := ts.URL
+
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "title": {"Offener Auftrag"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "title": {"Mia Auftrag"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "title": {"Admin Auftrag"}})
+	post(t, client, base+"/orders/2/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"2"}})
+	post(t, client, base+"/orders/3/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"1"}})
+
+	body := get(t, client, base+"/")
+	for _, want := range []string{"Neuer Auftrag", "Offene Aufträge", "In Bearbeitung",
+		"Offener Auftrag", "Mia Auftrag", "Admin Auftrag"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("admin dashboard missing %q", want)
+		}
+	}
+
+	mia, _ := loginAs(t, base, "mia")
+	body = get(t, mia, base+"/")
+	if strings.Contains(body, "Neuer Auftrag") || strings.Contains(body, "Offene Aufträge") ||
+		strings.Contains(body, "In Bearbeitung") {
+		t.Fatal("user dashboard shows admin controls or groups")
+	}
+	if !strings.Contains(body, "Meine Aufträge") || !strings.Contains(body, "Mia Auftrag") {
+		t.Fatalf("user dashboard missing own order: %s", body)
+	}
+	for _, foreign := range []string{"Offener Auftrag", "Admin Auftrag"} {
+		if strings.Contains(body, foreign) {
+			t.Fatalf("user dashboard shows foreign order %q", foreign)
+		}
+	}
+
+	// The 30-second refresh must apply the same role filter.
+	body = get(t, mia, base+"/orders")
+	if !strings.Contains(body, "Mia Auftrag") || strings.Contains(body, "Admin Auftrag") ||
+		strings.Contains(body, "Offener Auftrag") {
+		t.Fatalf("refresh fragment leaks foreign orders: %s", body)
+	}
+}
+
 func TestAdminTaskTemplatesAndOrderDropdown(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL

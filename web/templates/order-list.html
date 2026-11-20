@@ -1,8 +1,8 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
-{{define "order-list"}}
-{{if .Orders}}
+{{define "order-cards"}}
+{{if .}}
   <div class="grid cards">
-    {{range .Orders}}
+    {{range .}}
       <article class="order-card">
         <header>
           <strong><a href="/orders/{{.ID}}">{{.Title}}</a></strong>
@@ -20,11 +20,45 @@
           Δ <strong>{{signed (.DeltaSeconds)}}</strong>
           <span class="muted">({{pct (.DeltaPercent)}})</span>
         </p>
-        <footer class="muted">{{.OwnerName}} · {{date .CreatedAt}}</footer>
+        <footer class="muted">{{.OwnerName}} · {{date .CreatedAt}}
+          {{if .AssigneeName}} · {{.AssigneeName}}{{end}}
+        </footer>
       </article>
     {{end}}
   </div>
 {{else}}
-  <p>Noch keine Aufträge vorhanden. oben einen anlegen.</p>
+  <p class="muted empty-hint">Hier ist gerade nichts.</p>
+{{end}}
+{{end}}
+
+{{define "order-list"}}
+{{if .User.IsAdmin}}
+  <section class="order-group">
+    <h2>Offene Aufträge <span class="count">{{len .OpenOrders}}</span></h2>
+    <p class="muted">Noch keiner Person zugewiesen.</p>
+    {{template "order-cards" .OpenOrders}}
+  </section>
+
+  <section class="order-group">
+    <h2>In Bearbeitung <span class="count">{{len .ActiveOrders}}</span></h2>
+    <p class="muted">Einem Nutzer zugewiesen und noch nicht abgeschlossen.</p>
+    {{template "order-cards" .ActiveOrders}}
+  </section>
+
+  <details class="order-group collapsed">
+    <summary>Abgeschlossen ({{len .DoneOrders}})</summary>
+    {{template "order-cards" .DoneOrders}}
+  </details>
+{{else}}
+  <section class="order-group">
+    <h2>Meine Aufträge <span class="count">{{len .MyOrders}}</span></h2>
+    <p class="muted">Dir zugewiesen und noch nicht abgeschlossen.</p>
+    {{template "order-cards" .MyOrders}}
+  </section>
+
+  <details class="order-group collapsed">
+    <summary>Meine abgeschlossenen Aufträge ({{len .MyDoneOrders}})</summary>
+    {{template "order-cards" .MyDoneOrders}}
+  </details>
 {{end}}
 {{end}}
