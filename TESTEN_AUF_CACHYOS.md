@@ -182,8 +182,10 @@ curl -sS -b "$JAR" "$BASE/orders/1/report.csv" | head -20
 ```
 
 Erwartung: alle Statuscodes `200` (mit `-L` folgt curl den Redirects), CSV
-enthält `Auftrag;Smoke-Test`, `Soll (Minuten);90`, `Soll (AW);9`,
-`Ist (Sekunden);…`. Die `9 AW` entsprechen bei dem gesetzten Faktor `10`
+enthält `Auftrag;Smoke-Test`, `Übergeben;…`, `Gestartet;…`,
+`Pausen (Anzahl);1`, `Beendet;…`, `Soll (Minuten);90`, `Soll (AW);9`,
+`Ist (Sekunden);…` und einen Abschnitt `Zeitverlauf` mit `Pause;…`.
+Die `9 AW` entsprechen bei dem gesetzten Faktor `10`
 `90 Minuten`; die Aufgaben selbst haben keine Zeitangabe mehr.
 Ohne `-L` sind die ersten drei Aufrufe `303 See Other` – das ist ebenfalls
 normal, dann wird nur die Zielseite nicht mitgeladen.
@@ -193,7 +195,7 @@ normal, dann wird nur die Zielseite nicht mitgeladen.
 1. <http://127.0.0.1:8080/login> öffnen
 2. Anmelden mit `admin` / `testpass123`
 3. Unter **Nutzer & Vorlagen** den AW-Faktor ändern und eine Aufgaben-Vorlage anlegen (auch umbenennen/löschen testen), dann einen Auftrag mit Soll in AW, gewähltem Nutzer und optional mehreren Vorlagen aus dem Dropdown anlegen; neue Aufgaben lassen sich direkt im Dropdown anlegen → Timer Start/Pause/Weiter/Ende
-4. „Auswertung ansehen" und den CSV-Export prüfen
+4. Im Auftrag und in „Auswertung ansehen" den **Zeitverlauf** mit Übergabe, Starts, Pausendauer und Ende prüfen; den CSV-Export ebenfalls prüfen
 5. Oben rechts **Konto** (Passwort ändern) und **Nutzer** ( Admin-Seite) testen
 
 ---

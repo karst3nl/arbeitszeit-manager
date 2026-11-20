@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/karst3nl/arbeitszeit-manager/internal/model"
 )
 
 func testStore(t *testing.T) *Store {
@@ -241,6 +243,102 @@ func TestTimerFlowAndReport(t *testing.T) {
 	o, err := s.Order(id)
 	if err != nil || !o.Done() {
 		t.Fatalf("order should be done: %+v, %v", o, err)
+	}
+}
+
+func TestOrderTimelineRecordsHandoverStartPausesAndEnd(t *testing.T) {
+	s := testStore(t)
+	id := setupOrder(t, s)
+
+	// Changing the assignee restarts the handover clock.
+	if _, err := s.db.Exec(`UPDATE work_orders SET assigned_at = 100 WHERE id = ?`, id); err != nil {
+		t.Fatal(err)
+	}
+	mia, err := s.CreateUser("mia", "Mia", "hash", "user")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetAssignee(id, mia); err != nil {
+		t.Fatal(err)
+	}
+	o, err := s.Order(id)
+	if err != nil || o.AssignedAt <= 100 || o.AssigneeID != mia {
+		t.Fatalf("handover timestamp: %+v, %v", o, err)
+	}
+
+	if err := s.TimerAction(id, 1, "start"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.TimerAction(id, 1, "pause"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.Exec(`UPDATE pause_segments SET start_at = start_at - 30 WHERE work_order_id = ?`, id); err != nil {
+		t.Fatal(err)
+	}
+	openTimeline, err := s.Timeline(id)
+	if err != nil || len(openTimeline) != 2 {
+		t.Fatalf("open timeline: %+v, %v", openTimeline, err)
+	}
+	var openPause *model.TimeEntry
+	for i := range openTimeline {
+		if openTimeline[i].Kind == "pause" {
+			openPause = &openTimeline[i]
+			break
+		}
+	}
+	if openPause == nil || !openPause.Open || openPause.DurationSeconds < 30 {
+		t.Fatalf("open pause missing: %+v", openTimeline)
+	}
+
+	if err := s.TimerAction(id, 1, "resume"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.TimerAction(id, 1, "stop"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Use deterministic timestamps so durations are exact regardless of how
+	// fast the test runs.
+	if _, err := s.db.Exec(`UPDATE work_orders SET assigned_at = 900, completed_at = 2020 WHERE id = ?`, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.Exec(`UPDATE time_segments SET start_at = 1000, end_at = 1600 WHERE work_order_id = ? AND id = 1`, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.Exec(`UPDATE pause_segments SET start_at = 1600, end_at = 1720 WHERE work_order_id = ?`, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.Exec(`UPDATE time_segments SET start_at = 1720, end_at = 2020 WHERE work_order_id = ? AND id = 2`, id); err != nil {
+		t.Fatal(err)
+	}
+
+	timeline, err := s.Timeline(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []model.TimeEntry{
+		{ID: 1, Kind: "work", StartAt: 1000, EndAt: 1600, DurationSeconds: 600},
+		{ID: 1, Kind: "pause", StartAt: 1600, EndAt: 1720, DurationSeconds: 120},
+		{ID: 2, Kind: "work", StartAt: 1720, EndAt: 2020, DurationSeconds: 300},
+	}
+	if len(timeline) != len(want) {
+		t.Fatalf("timeline length = %d, want %d: %+v", len(timeline), len(want), timeline)
+	}
+	for i, entry := range timeline {
+		if entry.ID != want[i].ID || entry.Kind != want[i].Kind ||
+			entry.StartAt != want[i].StartAt || entry.EndAt != want[i].EndAt ||
+			entry.DurationSeconds != want[i].DurationSeconds || entry.Open {
+			t.Errorf("timeline[%d] = %+v, want %+v", i, entry, want[i])
+		}
+	}
+
+	rep, err := s.Report(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.AssignedAt != 900 || rep.StartedAt != 1000 || rep.CompletedAt != 2020 ||
+		rep.PauseCount != 1 || rep.PauseSeconds != 120 {
+		t.Fatalf("report timeline: %+v", rep)
 	}
 }
 

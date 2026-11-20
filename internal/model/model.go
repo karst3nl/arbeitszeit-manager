@@ -30,6 +30,7 @@ type Order struct {
 	OwnerName      string
 	AssigneeID     int64
 	AssigneeName   string
+	AssignedAt     int64
 	TimerState     string
 	TimerStartedAt int64
 	CreatedAt      int64
@@ -70,6 +71,17 @@ type Task struct {
 	Done     bool
 }
 
+// TimeEntry is one work or pause interval in an order's timeline. EndAt is
+// zero while the interval is still open.
+type TimeEntry struct {
+	ID              int64
+	Kind            string // "work" or "pause"
+	StartAt         int64
+	EndAt           int64
+	DurationSeconds int64
+	Open            bool
+}
+
 // TaskTemplate is a reusable task maintained by an admin. Selecting one when
 // creating an order adds a copy to that order.
 type TaskTemplate struct {
@@ -88,6 +100,12 @@ type Report struct {
 	DeviationPercent float64
 	Summary          string
 	CreatedAt        int64
+	AssignedAt       int64
+	StartedAt        int64
+	CompletedAt      int64
+	PauseSeconds     int64
+	PauseCount       int
+	Timeline         []TimeEntry
 	Notes            string
 	Tasks            []Task
 }

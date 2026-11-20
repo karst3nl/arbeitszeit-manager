@@ -91,3 +91,11 @@ func DateTime(ts int64) string {
 	}
 	return time.Unix(ts, 0).Local().Format("02.01.2006 15:04")
 }
+
+// DateTimeSeconds includes seconds for precise timeline entries.
+func DateTimeSeconds(ts int64) string {
+	if ts == 0 {
+		return "—"
+	}
+	return time.Unix(ts, 0).Local().Format("02.01.2006 15:04:05")
+}

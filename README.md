@@ -13,6 +13,7 @@ Schlanke Webapp für Arbeitsaufträge mit geplanten Zeiten, einem Timer für die
 - **Zuweisung beim Anlegen**: der Auftrag wird direkt einem aktiven Nutzer zugeordnet
 - **Aufgaben-Vorlagen**: Admins pflegen die Liste im Adminbereich oder legen neue Aufgaben direkt im Dropdown des Anlegeformulars an; mehrere Vorlagen werden per Mehrfachauswahl in den Auftrag kopiert
 - **Ein Timer pro Auftrag**: Start → Pause → Weiter → Ende, beliebig viele Pausen
+- **Zeitverlauf**: Zeitstempel für Übergabe an den Mitarbeiter, jeden Start, jede Pause inklusive Dauer und das Ende; sichtbar im Auftrag, in der Auswertung und im CSV-Export
 - **Live-Anzeige** der Ist-Zeit mit sekündlichem Browser-Tick und 30-Sekunden-Server-Sync
 - **Auswertung** nach Abschluss: Soll, Ist und Abweichung in AW und Stunden/Minuten sowie in Prozent, Balkenvergleich, Notiz und CSV-Export
 - **Mehrnutzerfähig** (mind. 6): Login, Rollen `admin` / `user`, Sessions, CSRF-Schutz; Nutzer können sich offene Aufträge selbst zuordnen, das eigene Passwort ändern und Admins können Passwörter zurücksetzen

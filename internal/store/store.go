@@ -412,7 +412,7 @@ func (s *Store) PurgeExpiredSessions() error {
 const orderSelect = `
 	SELECT o.id, o.title, o.description, o.status,
 	       o.owner_id, COALESCE(ow.display_name, ''),
-	       o.assignee_id, COALESCE(aw.display_name, ''),
+	       o.assignee_id, COALESCE(aw.display_name, ''), o.assigned_at,
 	       o.timer_state, o.timer_started_at, o.created_at, o.completed_at, o.notes,
 	       o.planned_minutes,
 	       COALESCE((SELECT SUM(COALESCE(end_at, ?) - start_at) FROM time_segments
@@ -425,7 +425,7 @@ const orderSelect = `
 func scanOrder(row interface{ Scan(...any) error }) (*model.Order, error) {
 	var o model.Order
 	err := row.Scan(&o.ID, &o.Title, &o.Description, &o.Status,
-		&o.OwnerID, &o.OwnerName, &o.AssigneeID, &o.AssigneeName,
+		&o.OwnerID, &o.OwnerName, &o.AssigneeID, &o.AssigneeName, &o.AssignedAt,
 		&o.TimerState, &o.TimerStartedAt, &o.CreatedAt, &o.CompletedAt, &o.Notes,
 		&o.PlannedMinutes, &o.ActualSeconds, &o.Interrupted)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -464,25 +464,35 @@ func (s *Store) Order(id int64) (*model.Order, error) {
 // CreateOrder inserts a new work order with the Soll and assignee chosen by
 // its creator.
 func (s *Store) CreateOrder(title, description string, ownerID, assigneeID, plannedMinutes int64) (int64, error) {
-	res, err := s.db.Exec(`INSERT INTO work_orders(title, description, planned_minutes, owner_id, assignee_id, created_at)
-		VALUES(?, ?, ?, ?, ?, ?)`, title, description, plannedMinutes, ownerID, assigneeID, time.Now().Unix())
+	now := time.Now().Unix()
+	var assignedAt int64
+	if assigneeID > 0 {
+		assignedAt = now
+	}
+	res, err := s.db.Exec(`INSERT INTO work_orders(title, description, planned_minutes, owner_id, assignee_id, assigned_at, created_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?)`, title, description, plannedMinutes, ownerID, assigneeID, assignedAt, now)
 	if err != nil {
 		return 0, err
 	}
 	return res.LastInsertId()
 }
 
-// SetAssignee assigns an order to a user (0 clears the assignment).
+// SetAssignee assigns an order to a user (0 clears the assignment). Changing
+// the assignee restarts the handover clock.
 func (s *Store) SetAssignee(orderID, userID int64) error {
-	_, err := s.db.Exec(`UPDATE work_orders SET assignee_id = ? WHERE id = ?`, userID, orderID)
+	_, err := s.db.Exec(`UPDATE work_orders
+		SET assignee_id = ?,
+		    assigned_at = CASE WHEN assignee_id = ? THEN assigned_at
+		                       WHEN ? = 0 THEN 0 ELSE ? END
+		WHERE id = ?`, userID, userID, userID, time.Now().Unix(), orderID)
 	return err
 }
 
 // ClaimOrder assigns a free order to a user. The conditional UPDATE makes
 // concurrent claims safe: only the first one succeeds.
 func (s *Store) ClaimOrder(orderID, userID int64) error {
-	res, err := s.db.Exec(`UPDATE work_orders SET assignee_id = ?
-		WHERE id = ? AND assignee_id = 0`, userID, orderID)
+	res, err := s.db.Exec(`UPDATE work_orders SET assignee_id = ?, assigned_at = ?
+		WHERE id = ? AND assignee_id = 0`, userID, time.Now().Unix(), orderID)
 	if err != nil {
 		return err
 	}
@@ -661,8 +671,13 @@ func (s *Store) CreateOrderFromTemplates(title, description string, ownerID, ass
 		tasks = append(tasks, t)
 	}
 
-	res, err := tx.Exec(`INSERT INTO work_orders(title, description, planned_minutes, owner_id, assignee_id, created_at)
-		VALUES(?, ?, ?, ?, ?, ?)`, title, description, plannedMinutes, ownerID, assigneeID, time.Now().Unix())
+	now := time.Now().Unix()
+	var assignedAt int64
+	if assigneeID > 0 {
+		assignedAt = now
+	}
+	res, err := tx.Exec(`INSERT INTO work_orders(title, description, planned_minutes, owner_id, assignee_id, assigned_at, created_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?)`, title, description, plannedMinutes, ownerID, assigneeID, assignedAt, now)
 	if err != nil {
 		return 0, err
 	}
@@ -698,6 +713,12 @@ func closeSegment(tx *sql.Tx, orderID, now, userID int64) error {
 	return err
 }
 
+func closePause(tx *sql.Tx, orderID, now, userID int64) error {
+	_, err := tx.Exec(`UPDATE pause_segments SET end_at = ?, ended_by = ?
+		WHERE work_order_id = ? AND end_at IS NULL`, now, userID, orderID)
+	return err
+}
+
 // TimerAction performs a state transition atomically. Valid actions are
 // start, pause, resume, stop and reopen.
 func (s *Store) TimerAction(orderID, userID int64, action string) error {
@@ -721,6 +742,9 @@ func (s *Store) TimerAction(orderID, userID int64, action string) error {
 		if err == nil && changed(res) {
 			_, err = tx.Exec(`INSERT INTO time_segments(work_order_id, start_at, started_by) VALUES(?, ?, ?)`,
 				orderID, now, userID)
+			if err == nil {
+				err = closePause(tx, orderID, now, userID)
+			}
 		}
 
 	case "pause":
@@ -728,6 +752,10 @@ func (s *Store) TimerAction(orderID, userID int64, action string) error {
 			WHERE id = ? AND timer_state = 'running'`, now, orderID)
 		if err == nil && changed(res) {
 			err = closeSegment(tx, orderID, now, userID)
+			if err == nil {
+				_, err = tx.Exec(`INSERT INTO pause_segments(work_order_id, start_at, started_by) VALUES(?, ?, ?)`,
+					orderID, now, userID)
+			}
 		}
 
 	case "stop":
@@ -736,6 +764,9 @@ func (s *Store) TimerAction(orderID, userID int64, action string) error {
 			WHERE id = ? AND timer_state IN ('running', 'paused')`, now, now, orderID)
 		if err == nil && changed(res) {
 			if err = closeSegment(tx, orderID, now, userID); err != nil {
+				break
+			}
+			if err = closePause(tx, orderID, now, userID); err != nil {
 				break
 			}
 			var report *model.Report
@@ -828,22 +859,91 @@ func (s *Store) TimerSnapshot(orderID int64) (TimerSnapshot, error) {
 	return snap, nil
 }
 
-// --- Reports ---------------------------------------------------------------
+// --- Timeline and reports --------------------------------------------------
 
-func buildReport(ctx context.Context, q queryer, orderID, now int64) (*model.Report, error) {
-	var r model.Report
-	var completedAt int64
-	err := q.QueryRow(`SELECT id, title, notes,
-		planned_minutes,
-		COALESCE((SELECT SUM(COALESCE(end_at, ?) - start_at) FROM time_segments
-		          WHERE work_order_id = work_orders.id), 0),
-		COALESCE(completed_at, 0)
-		FROM work_orders WHERE id = ?`, now, orderID).
-		Scan(&r.OrderID, &r.Title, &r.Notes, &r.PlannedMinutes, &r.ActualSeconds, &completedAt)
+const timelineSelect = `
+	SELECT id, kind, start_at, end_at,
+	       CASE WHEN end_at IS NULL THEN MAX(0, ? - start_at)
+	            ELSE MAX(0, end_at - start_at) END,
+	       end_at IS NULL
+	  FROM (
+	    SELECT id, 'work' AS kind, start_at, end_at
+	      FROM time_segments WHERE work_order_id = ?
+	    UNION ALL
+	    SELECT id, 'pause' AS kind, start_at, end_at
+	      FROM pause_segments WHERE work_order_id = ?
+	  )
+	 ORDER BY start_at, CASE WHEN kind = 'work' THEN 0 ELSE 1 END, id`
+
+func timelineEntries(ctx context.Context, q queryer, orderID, now int64) ([]model.TimeEntry, error) {
+	rows, err := q.QueryContext(ctx, timelineSelect, now, orderID, orderID)
 	if err != nil {
 		return nil, err
 	}
-	r.CreatedAt = completedAt
+	defer rows.Close()
+
+	var entries []model.TimeEntry
+	for rows.Next() {
+		var e model.TimeEntry
+		var endAt sql.NullInt64
+		if err := rows.Scan(&e.ID, &e.Kind, &e.StartAt, &endAt, &e.DurationSeconds, &e.Open); err != nil {
+			return nil, err
+		}
+		if endAt.Valid {
+			e.EndAt = endAt.Int64
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}
+
+// Timeline returns every work and pause interval of an order, oldest first.
+func (s *Store) Timeline(orderID int64) ([]model.TimeEntry, error) {
+	return timelineEntries(context.Background(), s.db, orderID, time.Now().Unix())
+}
+
+// fillTimeline adds handover, start, pause and completion information to a
+// report, regardless of whether the values were computed or stored earlier.
+func fillTimeline(ctx context.Context, q queryer, r *model.Report, now int64) error {
+	err := q.QueryRowContext(ctx, `SELECT COALESCE(assigned_at, 0), COALESCE(completed_at, 0)
+		FROM work_orders WHERE id = ?`, r.OrderID).
+		Scan(&r.AssignedAt, &r.CompletedAt)
+	if err != nil {
+		return err
+	}
+	r.CreatedAt = r.CompletedAt
+
+	r.Timeline, err = timelineEntries(ctx, q, r.OrderID, now)
+	if err != nil {
+		return err
+	}
+	for _, e := range r.Timeline {
+		if e.Kind == "pause" {
+			r.PauseCount++
+			r.PauseSeconds += e.DurationSeconds
+			continue
+		}
+		if r.StartedAt == 0 {
+			r.StartedAt = e.StartAt
+		}
+	}
+	return nil
+}
+
+func buildReport(ctx context.Context, q queryer, orderID, now int64) (*model.Report, error) {
+	var r model.Report
+	err := q.QueryRow(`SELECT id, title, notes,
+		planned_minutes,
+		COALESCE((SELECT SUM(COALESCE(end_at, ?) - start_at) FROM time_segments
+		          WHERE work_order_id = work_orders.id), 0)
+		FROM work_orders WHERE id = ?`, now, orderID).
+		Scan(&r.OrderID, &r.Title, &r.Notes, &r.PlannedMinutes, &r.ActualSeconds)
+	if err != nil {
+		return nil, err
+	}
+	if err := fillTimeline(ctx, q, &r, now); err != nil {
+		return nil, err
+	}
 	r.DeviationSeconds = r.ActualSeconds - r.PlannedMinutes*60
 	if r.PlannedMinutes > 0 {
 		r.DeviationPercent = float64(r.DeviationSeconds) / float64(r.PlannedMinutes*60) * 100
@@ -892,6 +992,9 @@ func (s *Store) Report(orderID int64) (*model.Report, error) {
 		return nil, err
 	}
 	r.Notes = notes
+	if err := fillTimeline(context.Background(), s.db, &r, time.Now().Unix()); err != nil {
+		return nil, err
+	}
 	r.Tasks, err = s.Tasks(orderID)
 	return &r, err
 }

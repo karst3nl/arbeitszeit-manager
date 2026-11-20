@@ -72,6 +72,7 @@ type pageData struct {
 	CountActive   int
 	CountDone     int
 	Order         *model.Order
+	Timeline      []model.TimeEntry
 	Tasks         []model.Task
 	TaskTemplates []model.TaskTemplate
 	SelectedTasks map[int64]bool
@@ -102,7 +103,8 @@ var templateFuncs = template.FuncMap{
 	"selected": func(ids map[int64]bool, id int64) bool {
 		return ids[id]
 	},
-	"date": timer.DateTime,
+	"date":     timer.DateTime,
+	"dateTime": timer.DateTimeSeconds,
 	"upperFirst": func(s string) string {
 		if s == "" {
 			return "?"
@@ -645,6 +647,11 @@ func (s *Server) orderPage(w http.ResponseWriter, r *http.Request) {
 	data.Title = o.Title
 	data.Tasks = tasks
 	data.Users = users
+	data.Timeline, err = s.store.Timeline(id)
+	if err != nil {
+		s.fail(w, http.StatusInternalServerError, "Zeitverlauf konnte nicht geladen werden")
+		return
+	}
 	s.render(w, "order.html", data)
 }
 
@@ -953,7 +960,11 @@ func (s *Server) reportCSV(w http.ResponseWriter, r *http.Request) {
 	factor := s.awMinutes()
 	rows := [][]string{
 		{"Auftrag", csvSafe(rep.Title)},
-		{"Abgeschlossen", timer.DateTime(rep.CreatedAt)},
+		{"Übergeben", timer.DateTimeSeconds(rep.AssignedAt)},
+		{"Gestartet", timer.DateTimeSeconds(rep.StartedAt)},
+		{"Pausen (Anzahl)", strconv.Itoa(rep.PauseCount)},
+		{"Pausen (Sekunden)", strconv.FormatInt(rep.PauseSeconds, 10)},
+		{"Beendet", timer.DateTimeSeconds(rep.CompletedAt)},
 		{"Soll (Minuten)", strconv.FormatInt(rep.PlannedMinutes, 10)},
 		{"Soll (AW)", timer.AWFromMinutes(rep.PlannedMinutes, factor)},
 		{"Ist (Sekunden)", strconv.FormatInt(rep.ActualSeconds, 10)},
@@ -967,6 +978,22 @@ func (s *Server) reportCSV(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, task := range rep.Tasks {
 		rows = append(rows, []string{csvSafe(task.Title)})
+	}
+	rows = append(rows,
+		[]string{},
+		[]string{"Zeitverlauf"},
+		[]string{"Ereignis", "Von", "Bis", "Dauer"},
+	)
+	for _, e := range rep.Timeline {
+		event := "Arbeit"
+		if e.Kind == "pause" {
+			event = "Pause"
+		}
+		end := timer.DateTimeSeconds(e.EndAt)
+		if e.Open {
+			end = "läuft"
+		}
+		rows = append(rows, []string{event, timer.DateTimeSeconds(e.StartAt), end, timer.Duration(e.DurationSeconds)})
 	}
 	if err := cw.WriteAll(rows); err != nil {
 		s.logger.Printf("write csv: %v", err)

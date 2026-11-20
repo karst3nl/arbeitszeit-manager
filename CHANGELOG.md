@@ -16,6 +16,7 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - Soll-Zeit wird beim Anlegen des Auftrags vom Ersteller in AW gesetzt (10 AW = 1 Stunde, Nachkommastellen erlaubt); bestehende Aufträge behalten ihre bisherige Soll-Summe durch eine Migration
 - Aufträge werden beim Anlegen direkt einem aktiven Nutzer zugewiesen; neue Aufgaben können im Dropdown des Anlegeformulars als Vorlage angelegt werden
 - AW-Faktor im Adminbereich einstellbar (Minuten pro AW, Standard 6); bestehende Soll-Minuten bleiben erhalten, neue AW-Eingaben und alle AW-Anzeigen nutzen den gespeicherten Faktor
+- Zeitverlauf mit Zeitstempeln für Übergabe, Start, Pausen inklusive Dauer und Ende in Auftrag, Auswertung und CSV; bestehende Daten werden aus den bisherigen Zeitsegmenten nachgezogen
 
 ### Geändert
 - Aufgaben und Vorlagen haben keine einzelnen Zeitangaben mehr; Soll und Auswertung beziehen sich auf den gesamten Auftrag. Timer, Auswertung und CSV zeigen AW-Werte zusätzlich zu Stunden/Minuten

@@ -233,6 +233,52 @@ func TestFullOrderLifecycle(t *testing.T) {
 	}
 }
 
+func TestOrderTimelineIsVisibleInUIAndCSV(t *testing.T) {
+	ts, client, csrf := setup(t)
+	base := ts.URL
+
+	post(t, client, base+"/orders", url.Values{
+		"csrf": {csrf}, "customer": {"Zeitachse"}, "plate": {"M-ZA 1"},
+		"aw": {"10"}, "assignee_id": {"1"},
+	})
+	post(t, client, base+"/orders/1/timer/start", url.Values{"csrf": {csrf}})
+	post(t, client, base+"/orders/1/timer/pause", url.Values{"csrf": {csrf}})
+	post(t, client, base+"/orders/1/timer/resume", url.Values{"csrf": {csrf}})
+	post(t, client, base+"/orders/1/timer/stop", url.Values{"csrf": {csrf}})
+
+	stamp := regexp.MustCompile(`\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}`)
+
+	body := get(t, client, base+"/orders/1")
+	for _, want := range []string{"Zeitverlauf", "Übergabe an Mitarbeiter", "Beendet"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("order timeline missing %q: %s", want, body)
+		}
+	}
+	if len(stamp.FindAllString(body, -1)) < 2 {
+		t.Fatalf("order timeline has no exact timestamps: %s", body)
+	}
+
+	body = get(t, client, base+"/orders/1/report")
+	for _, want := range []string{"Zeitverlauf", "Pausen gesamt", "Gestartet", "Beendet"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("report timeline missing %q: %s", want, body)
+		}
+	}
+	if len(stamp.FindAllString(body, -1)) < 4 {
+		t.Fatalf("report timeline has no exact timestamps: %s", body)
+	}
+
+	csv := get(t, client, base+"/orders/1/report.csv")
+	for _, want := range []string{
+		"Übergeben;", "Gestartet;", "Pausen (Anzahl);1", "Pausen (Sekunden);", "Beendet;",
+		"Zeitverlauf", "Ereignis;Von;Bis;Dauer", "Pause;",
+	} {
+		if !strings.Contains(csv, want) {
+			t.Fatalf("CSV timeline missing %q: %s", want, csv)
+		}
+	}
+}
+
 func TestDashboardIsRoleSpecific(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL

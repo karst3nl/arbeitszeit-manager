@@ -153,7 +153,8 @@ th {
 tr:last-child td { border-bottom: 0; }
 small { display: block; color: var(--muted); }
 .right { text-align: right; }
-.mono, .figures { font-variant-numeric: tabular-nums; }
+.mono, .figures, .timeline td:not(:first-child) { font-variant-numeric: tabular-nums; }
+.timeline td:first-child { white-space: nowrap; }
 .negative { color: var(--bad); }
 .positive { color: var(--ok); }
 

@@ -21,6 +21,42 @@
     {{template "timer" .}}
 
     <article class="card">
+      <h2>Zeitverlauf</h2>
+      <table class="timeline">
+        <thead>
+          <tr><th>Ereignis</th><th>Von</th><th>Bis</th><th>Dauer</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Ereignis">Übergabe an Mitarbeiter</td>
+            <td data-label="Von">{{dateTime .Order.AssignedAt}}</td>
+            <td data-label="Bis">—</td>
+            <td data-label="Dauer">—</td>
+          </tr>
+          {{range .Timeline}}
+            <tr>
+              <td data-label="Ereignis">
+                {{if eq .Kind "pause"}}Pause{{else}}Arbeit{{end}}
+              </td>
+              <td data-label="Von">{{dateTime .StartAt}}</td>
+              <td data-label="Bis">{{if .Open}}läuft{{else}}{{dateTime .EndAt}}{{end}}</td>
+              <td data-label="Dauer">{{dur .DurationSeconds}}</td>
+            </tr>
+          {{end}}
+          {{if .Order.CompletedAt}}
+            <tr>
+              <td data-label="Ereignis">Beendet</td>
+              <td data-label="Von">{{dateTime .Order.CompletedAt}}</td>
+              <td data-label="Bis">—</td>
+              <td data-label="Dauer">—</td>
+            </tr>
+          {{end}}
+        </tbody>
+      </table>
+      {{if not .Timeline}}<p class="muted">Noch keine Start- oder Pausenzeiten erfasst.</p>{{end}}
+    </article>
+
+    <article class="card">
       <h2>Soll-Zeit</h2>
       <p>
         Aktuelles Soll: <strong>{{minutes .Order.PlannedMinutes}}</strong>

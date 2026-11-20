@@ -12,6 +12,49 @@
   </div>
 </div>
 
+<article class="card">
+  <h2>Zeitverlauf</h2>
+  <table class="timeline">
+    <thead>
+      <tr><th>Ereignis</th><th>Von</th><th>Bis</th><th>Dauer</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="Ereignis">Übergabe an Mitarbeiter</td>
+        <td data-label="Von">{{dateTime .Report.AssignedAt}}</td>
+        <td data-label="Bis">—</td>
+        <td data-label="Dauer">—</td>
+      </tr>
+      <tr>
+        <td data-label="Ereignis">Gestartet</td>
+        <td data-label="Von">{{dateTime .Report.StartedAt}}</td>
+        <td data-label="Bis">—</td>
+        <td data-label="Dauer">—</td>
+      </tr>
+      {{range .Report.Timeline}}
+        <tr>
+          <td data-label="Ereignis">
+            {{if eq .Kind "pause"}}Pause{{else}}Arbeit{{end}}
+          </td>
+          <td data-label="Von">{{dateTime .StartAt}}</td>
+          <td data-label="Bis">{{if .Open}}läuft{{else}}{{dateTime .EndAt}}{{end}}</td>
+          <td data-label="Dauer">{{dur .DurationSeconds}}</td>
+        </tr>
+      {{end}}
+      <tr>
+        <td data-label="Ereignis">Beendet</td>
+        <td data-label="Von">{{dateTime .Report.CompletedAt}}</td>
+        <td data-label="Bis">—</td>
+        <td data-label="Dauer">—</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="muted">
+    Pausen gesamt: <strong>{{dur .Report.PauseSeconds}}</strong>
+    {{if .Report.PauseCount}}({{.Report.PauseCount}} ×){{end}}
+  </p>
+</article>
+
 <div class="page-columns">
   <article class="card col-main">
     <h2>Soll / Ist</h2>

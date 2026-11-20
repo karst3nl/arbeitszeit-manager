@@ -3,6 +3,7 @@
 package timer
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -29,6 +30,15 @@ func TestMinutes(t *testing.T) {
 	}
 	if got := Minutes(150); got != "2 h 30 min" {
 		t.Errorf("Minutes(150) = %q", got)
+	}
+}
+
+func TestDateTimeSeconds(t *testing.T) {
+	if got := DateTimeSeconds(0); got != "—" {
+		t.Errorf("DateTimeSeconds(0) = %q", got)
+	}
+	if got := DateTimeSeconds(1); !strings.HasSuffix(got, ":01") || !strings.Contains(got, ".") {
+		t.Errorf("DateTimeSeconds(1) = %q", got)
 	}
 }
 
