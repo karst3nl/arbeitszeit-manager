@@ -133,7 +133,7 @@ footer.container, footer.page-footer { padding-top: 1.5rem; border-top: 1px soli
 
   .app-shell {
     display: grid;
-    grid-template-columns: 250px minmax(0, 1fr);
+    grid-template-columns: 210px minmax(0, 1fr);
     grid-template-rows: 58px minmax(0, 1fr) 32px;
     height: 100vh;
   }
@@ -143,7 +143,7 @@ footer.container, footer.page-footer { padding-top: 1.5rem; border-top: 1px soli
     flex-direction: column;
     grid-column: 1;
     grid-row: 1 / -1;
-    padding: 1.1rem .8rem 1rem;
+    padding: 1rem .6rem .9rem;
     background: var(--pico-card-background-color, #f7f7f8);
     border-right: 1px solid var(--pico-muted-border-color);
     overflow-y: auto;
@@ -151,9 +151,9 @@ footer.container, footer.page-footer { padding-top: 1.5rem; border-top: 1px soli
   .sidebar-brand {
     display: flex;
     align-items: center;
-    gap: .5rem;
-    padding: 0 .6rem 1.1rem;
-    font-size: 1.15rem;
+    gap: .4rem;
+    padding: 0 .45rem 1rem;
+    font-size: 1.05rem;
     font-weight: 700;
     text-decoration: none;
     border-bottom: 1px solid var(--pico-muted-border-color);
@@ -167,12 +167,12 @@ footer.container, footer.page-footer { padding-top: 1.5rem; border-top: 1px soli
   .sidebar-nav a {
     display: flex;
     align-items: center;
-    gap: .7rem;
-    padding: .6rem .7rem;
+    gap: .55rem;
+    padding: .5rem .55rem;
     border-radius: .4rem;
     color: var(--pico-color);
     text-decoration: none;
-    font-size: .95rem;
+    font-size: .9rem;
   }
   .sidebar-nav a:hover { background: color-mix(in srgb, var(--pico-primary) 10%, transparent); }
   .sidebar-nav a.active {
@@ -180,7 +180,7 @@ footer.container, footer.page-footer { padding-top: 1.5rem; border-top: 1px soli
     color: var(--pico-primary-inverse);
     font-weight: 600;
   }
-  .nav-icon { width: 1.2rem; text-align: center; opacity: .85; }
+  .nav-icon { width: 1rem; text-align: center; opacity: .85; }
 
   .sidebar-user {
     display: flex;
@@ -188,19 +188,20 @@ footer.container, footer.page-footer { padding-top: 1.5rem; border-top: 1px soli
     align-items: flex-start;
     gap: .15rem;
     margin-top: auto;
-    padding: 1rem .6rem 0;
+    padding: .9rem .45rem 0;
     border-top: 1px solid var(--pico-muted-border-color);
   }
-  .sidebar-user strong { font-size: .9rem; }
+  .sidebar-user strong { font-size: .88rem; }
   .sidebar-user .muted { font-size: .78rem; }
   .sidebar-user form { margin-top: .5rem; width: 100%; }
-  .sidebar-user button { width: 100%; padding: .4rem .6rem; font-size: .8rem; }
+  .sidebar-user button { width: 100%; padding: .4rem .55rem; font-size: .78rem; }
   .avatar {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.2rem;
-    height: 2.2rem;
+    width: 1.9rem;
+    height: 1.9rem;
+    font-size: .85rem;
     border-radius: 50%;
     background: var(--pico-primary);
     color: var(--pico-primary-inverse);
