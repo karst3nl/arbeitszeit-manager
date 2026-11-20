@@ -34,29 +34,18 @@
           <p class="muted field-hint">Aktuell: 1 AW = {{.AWFactor}} Minuten (im Adminbereich änderbar). Nachkommastellen sind erlaubt.</p>
           <details class="template-picker">
             <summary>Aufgaben auswählen <span class="muted">(Mehrfachauswahl)</span></summary>
-            <div class="template-options">
-              {{if .TaskTemplates}}
-                {{range .TaskTemplates}}
-                  <label class="template-option">
-                    <input type="checkbox" name="template_id" value="{{.ID}}">
-                    <span>{{.Title}}</span>
-                  </label>
-                {{end}}
-              {{else}}
-                <p class="muted">Noch keine Aufgaben angelegt.</p>
-              {{end}}
-              <div class="template-new">
-                <input form="new-template-form" name="title" required maxlength="200" placeholder="Neue Aufgabe">
-                <button form="new-template-form" type="submit" class="secondary">Anlegen</button>
-              </div>
-            </div>
-            <small class="muted">Neue Aufgaben werden als Vorlage gespeichert und stehen danach hier zur Auswahl.</small>
+            {{template "template-options" .}}
+            <small class="muted">Neue Aufgaben werden als Vorlage gespeichert und sofort für diesen Auftrag ausgewählt.</small>
           </details>
           <div class="actions">
             <button type="submit">Auftrag erstellen</button>
           </div>
         </form>
-        <form id="new-template-form" method="post" action="/admin/task-templates">
+        <form id="new-template-form" method="post" action="/admin/task-templates"
+              hx-post="/admin/task-templates"
+              hx-target="#template-options"
+              hx-swap="outerHTML"
+              hx-include="input[name='template_id']:checked">
           {{template "csrf" .}}
           <input type="hidden" name="return_to" value="/">
         </form>
@@ -76,3 +65,23 @@
   </div>
 {{end}}
 {{template "footer" .}}
+
+{{define "template-options"}}
+  <div class="template-options" id="template-options">
+    {{if .TaskTemplates}}
+      {{range .TaskTemplates}}
+        <label class="template-option">
+          <input type="checkbox" name="template_id" value="{{.ID}}"{{if selected $.SelectedTasks .ID}} checked{{end}}>
+          <span>{{.Title}}</span>
+        </label>
+      {{end}}
+    {{else}}
+      <p class="muted">Noch keine Aufgaben angelegt.</p>
+    {{end}}
+    <div class="template-new">
+      <input id="new-template-title" form="new-template-form" name="title" value="{{.TemplateValue}}" required maxlength="200" placeholder="Neue Aufgabe">
+      <button form="new-template-form" type="submit" class="secondary">Anlegen</button>
+    </div>
+    {{if .TemplateNote}}<p class="muted template-note">{{.TemplateNote}}</p>{{end}}
+  </div>
+{{end}}

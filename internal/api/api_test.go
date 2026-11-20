@@ -106,6 +106,29 @@ func post(t *testing.T, client *http.Client, target string, values url.Values) s
 	return string(b)
 }
 
+func postHTMX(t *testing.T, client *http.Client, target string, values url.Values) string {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPost, target, strings.NewReader(values.Encode()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("HX-Request", "true")
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("HTMX POST %s: %d: %s", target, resp.StatusCode, b)
+	}
+	return string(b)
+}
+
 func postStatus(t *testing.T, client *http.Client, target string, values url.Values) int {
 	t.Helper()
 	resp, err := client.Post(target, "application/x-www-form-urlencoded", strings.NewReader(values.Encode()))
@@ -493,6 +516,53 @@ func TestInlineTemplateCreationFromDashboard(t *testing.T) {
 	if !strings.Contains(body, `name="template_id" value="1"`) ||
 		!strings.Contains(body, "Direkt aus Auftrag") {
 		t.Fatalf("new template missing in dropdown: %s", body)
+	}
+}
+
+func TestInlineTemplateCreationKeepsOrderFormState(t *testing.T) {
+	ts, client, csrf := setup(t)
+	base := ts.URL
+
+	post(t, client, base+"/admin/task-templates", url.Values{
+		"csrf": {csrf}, "title": {"Erste"},
+	})
+	post(t, client, base+"/admin/task-templates", url.Values{
+		"csrf": {csrf}, "title": {"Zweite"},
+	})
+
+	fragment := postHTMX(t, client, base+"/admin/task-templates", url.Values{
+		"csrf": {csrf}, "title": {"Neu"}, "template_id": {"1"},
+	})
+	for _, want := range []string{
+		`value="1" checked`,
+		`value="3" checked`,
+		"Aufgabe angelegt und ausgewählt.",
+		`id="template-options"`,
+	} {
+		if !strings.Contains(fragment, want) {
+			t.Fatalf("fragment missing %q: %s", want, fragment)
+		}
+	}
+	if strings.Contains(fragment, `action="/orders"`) {
+		t.Fatalf("fragment replaced the order form: %s", fragment)
+	}
+	if strings.Contains(fragment, `value="Neu"`) {
+		t.Fatalf("new template input was not cleared: %s", fragment)
+	}
+
+	// A failed creation keeps the entered text and the previous selection.
+	fragment = postHTMX(t, client, base+"/admin/task-templates", url.Values{
+		"csrf": {csrf}, "title": {"Neu"}, "template_id": {"1", "3"},
+	})
+	for _, want := range []string{
+		"Aufgabe mit diesem Namen existiert bereits.",
+		`value="Neu"`,
+		`value="1" checked`,
+		`value="3" checked`,
+	} {
+		if !strings.Contains(fragment, want) {
+			t.Fatalf("error fragment missing %q: %s", want, fragment)
+		}
 	}
 }
 

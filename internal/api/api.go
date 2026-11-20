@@ -74,6 +74,9 @@ type pageData struct {
 	Order         *model.Order
 	Tasks         []model.Task
 	TaskTemplates []model.TaskTemplate
+	SelectedTasks map[int64]bool
+	TemplateValue string
+	TemplateNote  string
 	Users         []model.User
 	Report        *model.Report
 
@@ -95,6 +98,9 @@ var templateFuncs = template.FuncMap{
 	"awSeconds": timer.AWFromSeconds,
 	"orderCards": func(factor float64, orders []model.Order) orderCardsData {
 		return orderCardsData{Orders: orders, AWFactor: factor}
+	},
+	"selected": func(ids map[int64]bool, id int64) bool {
+		return ids[id]
 	},
 	"date": timer.DateTime,
 	"upperFirst": func(s string) string {
@@ -231,6 +237,23 @@ func (s *Server) fail(w http.ResponseWriter, status int, message string) {
 func pathID(r *http.Request, name string) (int64, bool) {
 	id, err := strconv.ParseInt(r.PathValue(name), 10, 64)
 	return id, err == nil && id > 0
+}
+
+// templateIDsFromForm reads the currently selected task templates. The same
+// values are sent along when a new template is created so the selection in the
+// order form survives the HTMX fragment swap.
+func templateIDsFromForm(r *http.Request) []int64 {
+	var ids []int64
+	seen := make(map[int64]bool)
+	for _, value := range r.Form["template_id"] {
+		id, err := strconv.ParseInt(value, 10, 64)
+		if err != nil || id <= 0 || seen[id] {
+			continue
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 func canEdit(u *model.User, o *model.Order) bool {
@@ -567,16 +590,7 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/?err=Der+gew%C3%A4hlte+Nutzer+ist+nicht+verf%C3%BCgbar.", http.StatusSeeOther)
 		return
 	}
-	var templateIDs []int64
-	seen := make(map[int64]bool)
-	for _, value := range r.Form["template_id"] {
-		id, err := strconv.ParseInt(value, 10, 64)
-		if err != nil || id <= 0 || seen[id] {
-			continue
-		}
-		seen[id] = true
-		templateIDs = append(templateIDs, id)
-	}
+	templateIDs := templateIDsFromForm(r)
 
 	var id int64
 	if len(templateIDs) > 0 {
@@ -994,6 +1008,23 @@ func (s *Server) updateAWFactor(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) createTaskTemplate(w http.ResponseWriter, r *http.Request) {
 	title := strings.TrimSpace(r.FormValue("title"))
+	selected := templateIDsFromForm(r)
+
+	// The dashboard creates templates through HTMX. Returning a fragment keeps
+	// the order form (and everything already typed into it) untouched.
+	if r.Header.Get("HX-Request") == "true" {
+		value, note := "", "Aufgabe angelegt und ausgewählt."
+		if title == "" {
+			value, note = r.FormValue("title"), "Bezeichnung erforderlich."
+		} else if id, err := s.store.CreateTaskTemplate(title); err != nil {
+			value, note = title, "Aufgabe mit diesem Namen existiert bereits."
+		} else {
+			selected = append(selected, id)
+		}
+		s.renderTemplateOptions(w, r, value, note, selected)
+		return
+	}
+
 	back := "/admin"
 	if r.FormValue("return_to") == "/" {
 		back = "/"
@@ -1007,6 +1038,23 @@ func (s *Server) createTaskTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, back+"?ok=Aufgaben-Vorlage+angelegt.", http.StatusSeeOther)
+}
+
+func (s *Server) renderTemplateOptions(w http.ResponseWriter, r *http.Request, value, note string, selected []int64) {
+	templates, err := s.store.TaskTemplates()
+	if err != nil {
+		s.fail(w, http.StatusInternalServerError, "Aufgaben-Vorlagen konnten nicht geladen werden")
+		return
+	}
+	data := s.base(r)
+	data.TaskTemplates = templates
+	data.SelectedTasks = make(map[int64]bool, len(selected))
+	for _, id := range selected {
+		data.SelectedTasks[id] = true
+	}
+	data.TemplateValue = value
+	data.TemplateNote = note
+	s.render(w, "template-options", data)
 }
 
 func (s *Server) updateTaskTemplate(w http.ResponseWriter, r *http.Request) {

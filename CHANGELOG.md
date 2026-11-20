@@ -22,6 +22,7 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - Große Seitenüberschriften entfernt; Auftrags- und Auswertungstitel bleiben als kompakte Zeile, Navigation und angemeldeter Nutzer stehen in der oberen Leiste
 
 ### Behoben
+- Neue Aufgaben im Auftragsformular werden per HTMX eingefügt, ohne die Seite neu zu laden; bereits eingegebene Auftragsdaten und ausgewählte Aufgaben bleiben erhalten
 - Live-Ist-Zeit in Übersicht und Aufträgen während eines laufenden Timers
 - Auftragstitel in gespeicherter Auswertung und CSV-Export
 - CSV-Formel-Injektion bei Werten mit führenden Sonderzeichen
