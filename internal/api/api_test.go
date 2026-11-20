@@ -154,7 +154,7 @@ func TestFullOrderLifecycle(t *testing.T) {
 	base := ts.URL
 
 	body := post(t, client, base+"/orders", url.Values{
-		"csrf": {csrf}, "title": {"Kunde Muster"}, "description": {"Relaunch"},
+		"csrf": {csrf}, "customer": {"Kunde Muster"}, "plate": {"M-AB 123"}, "description": {"Relaunch"},
 	})
 	if !strings.Contains(body, "Kunde Muster") {
 		t.Fatalf("order page missing title: %s", body)
@@ -213,9 +213,9 @@ func TestDashboardIsRoleSpecific(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
 
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "title": {"Offener Auftrag"}})
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "title": {"Mia Auftrag"}})
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "title": {"Admin Auftrag"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Offener Auftrag"}, "plate": {"M-AB 1"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Mia Auftrag"}, "plate": {"M-AB 2"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Admin Auftrag"}, "plate": {"M-AB 3"}})
 	post(t, client, base+"/orders/2/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"2"}})
 	post(t, client, base+"/orders/3/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"1"}})
 
@@ -250,7 +250,7 @@ func TestDashboardIsRoleSpecific(t *testing.T) {
 	}
 }
 
-func TestAdminTaskTemplatesAndOrderDropdown(t *testing.T) {
+func TestAdminTaskTemplatesAndOrderCreation(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
 
@@ -262,16 +262,24 @@ func TestAdminTaskTemplatesAndOrderDropdown(t *testing.T) {
 	post(t, client, base+"/admin/task-templates", url.Values{
 		"csrf": {csrf}, "title": {"Konzeption"}, "planned": {"60"},
 	})
+	post(t, client, base+"/admin/task-templates", url.Values{
+		"csrf": {csrf}, "title": {"Umsetzung"}, "planned": {"120"},
+	})
 	body = get(t, client, base+"/")
-	if !strings.Contains(body, `<option value="1">Konzeption (60 min)</option>`) {
-		t.Fatalf("template missing in dropdown: %s", body)
+	if !strings.Contains(body, `name="template_id" value="1"`) ||
+		!strings.Contains(body, `name="template_id" value="2"`) {
+		t.Fatalf("templates missing in multi-select: %s", body)
 	}
 
+	// A stale "planned" field must not override the task sum.
 	body = post(t, client, base+"/orders", url.Values{
-		"csrf": {csrf}, "title": {"Vorlagen-Auftrag"}, "planned": {"0"}, "template_id": {"1"},
+		"csrf": {csrf}, "customer": {"Muster GmbH"}, "plate": {"M-AB 1234"},
+		"planned": {"999"}, "template_id": {"1", "2"},
 	})
-	if !strings.Contains(body, "Konzeption") {
-		t.Fatalf("template task not copied into order: %s", body)
+	for _, want := range []string{"Muster GmbH · M-AB 1234", "Konzeption", "Umsetzung", "3 h 0 min"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("order page missing %q: %s", want, body)
+		}
 	}
 
 	mia, miaCSRF := loginAs(t, base, "mia")
@@ -286,13 +294,17 @@ func TestAdminTaskTemplatesAndOrderDropdown(t *testing.T) {
 		t.Fatalf("non-admin deleted a template: %d", got)
 	}
 
-	body = post(t, client, base+"/admin/task-templates/1/delete", url.Values{"csrf": {csrf}})
+	body = post(t, client, base+"/admin/task-templates/2/delete", url.Values{"csrf": {csrf}})
 	if !strings.Contains(body, "Nutzer verwalten") {
 		t.Fatalf("delete did not return to admin page: %s", body)
 	}
 	body = get(t, client, base+"/")
-	if strings.Contains(body, "Konzeption (60 min)") {
-		t.Fatal("deleted template is still in the dropdown")
+	if strings.Contains(body, `name="template_id" value="2"`) {
+		t.Fatal("deleted template is still selectable")
+	}
+	body = get(t, client, base+"/orders/1")
+	if !strings.Contains(body, "Umsetzung") {
+		t.Fatal("deleting a template removed it from an existing order")
 	}
 }
 
@@ -301,7 +313,7 @@ func TestUserCanClaimUnassignedOrder(t *testing.T) {
 	base := ts.URL
 
 	post(t, client, base+"/orders", url.Values{
-		"csrf": {csrf}, "title": {"Freier Auftrag"},
+		"csrf": {csrf}, "customer": {"Freier Auftrag"}, "plate": {"M-AB 4"},
 	})
 
 	mia, miaCSRF := loginAs(t, base, "mia")
@@ -348,7 +360,7 @@ func TestPasswordChangeAndAdminReset(t *testing.T) {
 func TestCSVFormulaInjectionIsNeutralised(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "title": {"=1+1"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"=1+1"}, "plate": {"M-AB 5"}})
 	post(t, client, base+"/orders/1/tasks", url.Values{
 		"csrf": {csrf}, "title": {"=SUM(A1)"}, "planned": {"10"},
 	})
@@ -364,7 +376,7 @@ func TestCSVFormulaInjectionIsNeutralised(t *testing.T) {
 func TestDeleteOrder(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "title": {"Wegwerfauftrag"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Wegwerfauftrag"}, "plate": {"M-AB 6"}})
 
 	body := post(t, client, base+"/orders/1/delete", url.Values{"csrf": {csrf}})
 	if !strings.Contains(body, "Arbeitsaufträge") {
@@ -378,8 +390,8 @@ func TestDeleteOrder(t *testing.T) {
 func TestTaskCannotBeChangedThroughAnotherOrder(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "title": {"Auftrag A"}})
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "title": {"Auftrag B"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Auftrag A"}, "plate": {"M-AB 7"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Auftrag B"}, "plate": {"M-AB 8"}})
 	post(t, client, base+"/orders/2/tasks", url.Values{
 		"csrf": {csrf}, "title": {"Geheim"}, "planned": {"10"},
 	})
@@ -403,7 +415,7 @@ func TestTaskCannotBeChangedThroughAnotherOrder(t *testing.T) {
 func TestCompletedOrderTasksAreLocked(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "title": {"Fertig"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Fertig"}, "plate": {"M-AB 9"}})
 	post(t, client, base+"/orders/1/tasks", url.Values{
 		"csrf": {csrf}, "title": {"Konzeption"}, "planned": {"60"},
 	})

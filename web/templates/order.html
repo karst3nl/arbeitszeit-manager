@@ -22,24 +22,9 @@
       <h2>Soll-Zeit</h2>
       <p>
         Aktuelles Soll: <strong>{{minutes .Order.PlannedMinutes}}</strong>
-        {{if gt .Order.SollMinutes 0}}
-          <span class="muted">(festgelegt; Aufgaben-Summe: {{minutes .TaskMinutes}})</span>
-        {{else}}
-          <span class="muted">(Summe der Aufgaben)</span>
-        {{end}}
+        <span class="muted">(Summe der geplanten Aufgabenzeiten)</span>
       </p>
-      {{if .Order.Done}}
-        <p class="muted">Auftrag abgeschlossen – zum Ändern zuerst wieder öffnen.</p>
-      {{else}}
-        <form method="post" action="/orders/{{.Order.ID}}/soll" class="soll-form">
-          {{template "csrf" .}}
-          <label>Soll-Zeit in Minuten
-            <input name="planned" type="number" min="0" max="60000" value="{{.Order.SollMinutes}}" required>
-            <small class="muted">0 = Summe der Aufgaben als Soll verwenden</small>
-          </label>
-          <button type="submit" class="secondary">Soll speichern</button>
-        </form>
-      {{end}}
+      <p class="muted">Das Soll passt sich automatisch an, wenn Aufgaben ergänzt oder ihre Minuten geändert werden.</p>
     </section>
 
     <section>

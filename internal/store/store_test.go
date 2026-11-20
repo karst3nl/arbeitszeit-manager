@@ -26,7 +26,7 @@ func testStore(t *testing.T) *Store {
 
 func setupOrder(t *testing.T, s *Store) int64 {
 	t.Helper()
-	id, err := s.CreateOrder("Testauftrag", "Beschreibung", 0, 1)
+	id, err := s.CreateOrder("Testauftrag", "Beschreibung", 1)
 	if err != nil {
 		t.Fatalf("create order: %v", err)
 	}
@@ -39,52 +39,39 @@ func setupOrder(t *testing.T, s *Store) int64 {
 	return id
 }
 
-func TestOrderSollMinutes(t *testing.T) {
+func TestOrderSollFromTaskMinutes(t *testing.T) {
 	s := testStore(t)
+	id := setupOrder(t, s)
 
-	// Without an explicit Soll the sum of the task minutes is used, so
-	// existing orders keep their previous behaviour.
-	fallbackID := setupOrder(t, s)
-	o, err := s.Order(fallbackID)
-	if err != nil {
-		t.Fatal(err)
+	o, err := s.Order(id)
+	if err != nil || o.PlannedMinutes != 180 {
+		t.Fatalf("Soll from tasks: %+v, %v", o, err)
 	}
-	if o.SollMinutes != 0 || o.PlannedMinutes != 180 {
-		t.Fatalf("fallback Soll: explicit=%d effective=%d", o.SollMinutes, o.PlannedMinutes)
-	}
-
-	explicitID, err := s.CreateOrder("Soll-Auftrag", "", 90, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := s.AddTask(explicitID, "Teil", 30); err != nil {
-		t.Fatal(err)
-	}
-	o, err = s.Order(explicitID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if o.SollMinutes != 90 || o.PlannedMinutes != 90 {
-		t.Fatalf("explicit Soll: explicit=%d effective=%d", o.SollMinutes, o.PlannedMinutes)
-	}
-	rep, err := s.Report(explicitID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if rep.PlannedMinutes != 90 {
-		t.Fatalf("report Soll: %d", rep.PlannedMinutes)
+	rep, err := s.Report(id)
+	if err != nil || rep.PlannedMinutes != 180 {
+		t.Fatalf("report Soll: %+v, %v", rep, err)
 	}
 
-	// Resetting to 0 restores the task-based fallback.
-	if err := s.SetPlannedMinutes(explicitID, 0); err != nil {
+	// Old databases may still hold an explicit Soll. It must be ignored:
+	// the planned task minutes are now the only source of truth.
+	if _, err := s.db.Exec(`UPDATE work_orders SET planned_minutes = 90 WHERE id = ?`, id); err != nil {
 		t.Fatal(err)
 	}
-	o, err = s.Order(explicitID)
-	if err != nil {
+	o, err = s.Order(id)
+	if err != nil || o.PlannedMinutes != 180 {
+		t.Fatalf("legacy Soll was used: %+v, %v", o, err)
+	}
+	rep, err = s.Report(id)
+	if err != nil || rep.PlannedMinutes != 180 {
+		t.Fatalf("legacy Soll in report: %+v, %v", rep, err)
+	}
+
+	if err := s.AddTask(id, "Prüfung", 20); err != nil {
 		t.Fatal(err)
 	}
-	if o.SollMinutes != 0 || o.PlannedMinutes != 30 {
-		t.Fatalf("Soll after reset: explicit=%d effective=%d", o.SollMinutes, o.PlannedMinutes)
+	o, err = s.Order(id)
+	if err != nil || o.PlannedMinutes != 200 {
+		t.Fatalf("Soll after adding a task: %+v, %v", o, err)
 	}
 }
 
@@ -94,7 +81,8 @@ func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.CreateTaskTemplate("Umsetzung", 120); err != nil {
+	secondID, err := s.CreateTaskTemplate("Umsetzung", 120)
+	if err != nil {
 		t.Fatal(err)
 	}
 	templates, err := s.TaskTemplates()
@@ -105,27 +93,28 @@ func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 		t.Fatalf("unexpected template: %+v", templates[0])
 	}
 
-	orderID, err := s.CreateOrderFromTemplate("Kunde", "", 0, 1, templateID)
+	orderID, err := s.CreateOrderFromTemplates("Kunde", "", 1, []int64{templateID, secondID})
 	if err != nil {
 		t.Fatal(err)
 	}
 	tasks, err := s.Tasks(orderID)
-	if err != nil || len(tasks) != 1 {
+	if err != nil || len(tasks) != 2 {
 		t.Fatalf("copied tasks: %d, %v", len(tasks), err)
 	}
-	if tasks[0].Title != "Konzeption" || tasks[0].PlannedMinutes != 60 {
-		t.Fatalf("unexpected copied task: %+v", tasks[0])
+	if tasks[0].Title != "Konzeption" || tasks[0].PlannedMinutes != 60 ||
+		tasks[1].Title != "Umsetzung" || tasks[1].PlannedMinutes != 120 {
+		t.Fatalf("unexpected copied tasks: %+v", tasks)
 	}
 	o, err := s.Order(orderID)
-	if err != nil || o.PlannedMinutes != 60 {
-		t.Fatalf("order Soll from template: %+v, %v", o, err)
+	if err != nil || o.PlannedMinutes != 180 {
+		t.Fatalf("order Soll from templates: %+v, %v", o, err)
 	}
 
 	before, err := s.Orders()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.CreateOrderFromTemplate("Fehler", "", 0, 1, 999); !errors.Is(err, ErrNotFound) {
+	if _, err := s.CreateOrderFromTemplates("Fehler", "", 1, []int64{templateID, 999}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("missing template: %v", err)
 	}
 	after, err := s.Orders()
@@ -141,8 +130,8 @@ func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 		t.Fatalf("templates after delete: %d, %v", len(templates), err)
 	}
 	tasks, err = s.Tasks(orderID)
-	if err != nil || len(tasks) != 1 {
-		t.Fatalf("copied task should survive template deletion: %d, %v", len(tasks), err)
+	if err != nil || len(tasks) != 2 {
+		t.Fatalf("copied tasks should survive template deletion: %d, %v", len(tasks), err)
 	}
 }
 

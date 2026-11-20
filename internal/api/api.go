@@ -124,7 +124,6 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /orders/{id}/tasks/{taskID}", s.auth.Require(http.HandlerFunc(s.updateTask)))
 	mux.Handle("POST /orders/{id}/tasks/{taskID}/delete", s.auth.Require(http.HandlerFunc(s.deleteTask)))
 	mux.Handle("POST /orders/{id}/notes", s.auth.Require(http.HandlerFunc(s.saveNotes)))
-	mux.Handle("POST /orders/{id}/soll", s.auth.Require(http.HandlerFunc(s.setSoll)))
 	mux.Handle("GET /orders/{id}/timer", s.auth.Require(http.HandlerFunc(s.timerFragment)))
 	mux.Handle("POST /orders/{id}/timer/{action}", s.auth.Require(http.HandlerFunc(s.timerAction)))
 	mux.Handle("GET /orders/{id}/report", s.auth.Require(http.HandlerFunc(s.report)))
@@ -388,63 +387,46 @@ func (s *Server) orderList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
-	title := r.FormValue("title")
-	if title == "" {
-		http.Redirect(w, r, "/?err=Titel+darf+nicht+leer+sein.", http.StatusSeeOther)
+	customer := strings.TrimSpace(r.FormValue("customer"))
+	plate := strings.TrimSpace(r.FormValue("plate"))
+	if customer == "" || plate == "" {
+		http.Redirect(w, r, "/?err=Kundenname+und+Kennzeichen+sind+erforderlich.", http.StatusSeeOther)
 		return
 	}
-	plannedValue := r.FormValue("planned")
-	if plannedValue == "" {
-		plannedValue = "0"
-	}
-	planned, err := strconv.ParseInt(plannedValue, 10, 64)
-	if err != nil || planned < 0 || planned > 60000 {
-		http.Redirect(w, r, "/?err=Soll-Zeit+muss+zwischen+0+und+60000+Minuten+liegen.", http.StatusSeeOther)
+	title := customer + " · " + plate
+
+	if err := r.ParseForm(); err != nil {
+		s.fail(w, http.StatusBadRequest, "Ungültige Formulardaten")
 		return
 	}
-	templateID, _ := strconv.ParseInt(r.FormValue("template_id"), 10, 64)
-	var id int64
-	if templateID > 0 {
-		id, err = s.store.CreateOrderFromTemplate(title, r.FormValue("description"), planned, auth.UserFrom(r).ID, templateID)
-		if errors.Is(err, store.ErrNotFound) {
-			http.Redirect(w, r, "/?err=Ausgew%C3%A4hlte+Aufgabe+nicht+mehr+vorhanden.", http.StatusSeeOther)
-			return
+	var templateIDs []int64
+	seen := make(map[int64]bool)
+	for _, value := range r.Form["template_id"] {
+		id, err := strconv.ParseInt(value, 10, 64)
+		if err != nil || id <= 0 || seen[id] {
+			continue
 		}
+		seen[id] = true
+		templateIDs = append(templateIDs, id)
+	}
+
+	var id int64
+	var err error
+	if len(templateIDs) > 0 {
+		id, err = s.store.CreateOrderFromTemplates(title, r.FormValue("description"),
+			auth.UserFrom(r).ID, templateIDs)
 	} else {
-		id, err = s.store.CreateOrder(title, r.FormValue("description"), planned, auth.UserFrom(r).ID)
+		id, err = s.store.CreateOrder(title, r.FormValue("description"), auth.UserFrom(r).ID)
+	}
+	if errors.Is(err, store.ErrNotFound) {
+		http.Redirect(w, r, "/?err=Ausgew%C3%A4hlte+Aufgabe+nicht+mehr+vorhanden.", http.StatusSeeOther)
+		return
 	}
 	if err != nil {
 		s.fail(w, http.StatusInternalServerError, "Auftrag konnte nicht erstellt werden")
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/orders/%d?ok=Auftrag+erstellt.", id), http.StatusSeeOther)
-}
-
-func (s *Server) setSoll(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "id")
-	if !ok {
-		s.fail(w, http.StatusBadRequest, "Ungültige Auftragsnummer")
-		return
-	}
-	o, err := s.store.Order(id)
-	if err != nil || o == nil || !canEdit(auth.UserFrom(r), o) {
-		s.fail(w, http.StatusForbidden, "Keine Berechtigung")
-		return
-	}
-	if o.Done() {
-		s.fail(w, http.StatusConflict, "Auftrag ist abgeschlossen. Erst wieder öffnen.")
-		return
-	}
-	minutes, err := strconv.ParseInt(r.FormValue("planned"), 10, 64)
-	if err != nil || minutes < 0 || minutes > 60000 {
-		http.Redirect(w, r, fmt.Sprintf("/orders/%d?err=Soll-Zeit+muss+zwischen+0+und+60000+Minuten+liegen.", id), http.StatusSeeOther)
-		return
-	}
-	if err := s.store.SetPlannedMinutes(id, minutes); err != nil {
-		s.fail(w, http.StatusInternalServerError, "Soll-Zeit konnte nicht gespeichert werden")
-		return
-	}
-	http.Redirect(w, r, fmt.Sprintf("/orders/%d?ok=Soll-Zeit+gespeichert.", id), http.StatusSeeOther)
 }
 
 func (s *Server) orderPage(w http.ResponseWriter, r *http.Request) {

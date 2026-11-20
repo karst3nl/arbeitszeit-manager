@@ -8,9 +8,10 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ### Hinzugefügt
 - Desktop-Oberfläche mit fester Seitenleiste, Titelleiste und Statusleiste ab 1100 px; Navigation zeigt den aktiven Bereich
 - Startseite nach Rolle: Admins sehen alle offenen und in Bearbeitung befindlichen Aufträge plus Formular zum Anlegen; Nutzer nur die ihnen zugewiesenen Aufträge
-- Aufgaben-Vorlagen im Adminbereich, auswählbar im Dropdown beim Anlegen eines Auftrags (Aufgabe wird direkt in den neuen Auftrag kopiert)
+- Aufgaben-Vorlagen im Adminbereich; beim Anlegen eines Auftrags sind mehrere Vorlagen per Mehrfachauswahl wählbar und werden direkt kopiert
 - Desktop-Layout: breitere Ansicht und zweispaltige Seiten ab 1100 px; Smartphone-Layout bleibt unverändert
-- Soll-Zeit direkt beim Anlegen eines Auftrags; `0` übernimmt weiterhin die Summe der Aufgaben und lässt sich im Auftrag später ändern
+- Auftragstitel wird automatisch aus Kundenname und Kennzeichen gebildet
+- Soll-Zeit ist ausschließlich die Summe der geplanten Minuten aller Aufgaben und passt sich bei Änderungen automatisch an; das separate Soll-Feld entfällt
 
 ### Behoben
 - Live-Ist-Zeit in Übersicht und Aufträgen während eines laufenden Timers
@@ -29,7 +30,6 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - Relative Datenbankpfade wie `./data/app.db` funktionieren wieder (SQLite-URI ohne Authority)
 
 ### Geplant
-- Wiederkehrende Aufträge / Vorlagen
 - Optionaler Fernzugriff (Tailscale)
 - Mehrsprachigkeit (DE/EN)
 

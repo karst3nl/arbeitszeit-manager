@@ -159,9 +159,9 @@ curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'login: %{http_code}\n' \
 curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'vorlage: %{http_code}\n' \
   -d "csrf=$CSRF&title=Konzeption&planned=60" "$BASE/admin/task-templates"
 
-# Auftrag anlegen (optional mit Vorlage: &template_id=1)
+# Auftrag anlegen (Kunde + Kennzeichen ergeben den Titel; mehrere Vorlagen möglich: &template_id=1&template_id=2)
 curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'auftrag: %{http_code}\n' \
-  -d "csrf=$CSRF&title=Smoke-Test&planned=90" "$BASE/orders"
+  -d "csrf=$CSRF&customer=Smoke-Test&plate=M-AB%20123&template_id=1" "$BASE/orders"
 
 # Aufgabe mit 60 geplanten Minuten
 curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'aufgabe: %{http_code}\n' \

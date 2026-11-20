@@ -10,26 +10,30 @@
         <form method="post" action="/orders">
           {{template "csrf" .}}
           <div class="grid">
-            <label>Titel
-              <input name="title" required maxlength="200" placeholder="z. B. Kunde Muster – Relaunch">
+            <label>Kundenname
+              <input name="customer" required maxlength="200" placeholder="z. B. Muster GmbH">
             </label>
-            <label>Beschreibung
+            <label>Kennzeichen
+              <input name="plate" required maxlength="40" placeholder="z. B. M-AB 1234">
+            </label>
+            <label>Beschreibung (optional)
               <input name="description" maxlength="500" placeholder="kurz beschreiben">
             </label>
-            <label>Soll-Zeit in Minuten
-              <input name="planned" type="number" min="0" max="60000" value="0" required>
-              <small class="muted">0 = Summe der Aufgaben als Soll verwenden</small>
-            </label>
-            <label>Aufgabe aus Vorlage (optional)
-              <select name="template_id">
-                <option value="0">— keine —</option>
-                {{range .TaskTemplates}}
-                  <option value="{{.ID}}">{{.Title}} ({{.PlannedMinutes}} min)</option>
-                {{end}}
-              </select>
-              <small class="muted">Die gewählte Aufgabe wird dem Auftrag sofort hinzugefügt.</small>
-            </label>
           </div>
+          <fieldset class="template-picker">
+            <legend>Aufgaben auswählen</legend>
+            {{if .TaskTemplates}}
+              {{range .TaskTemplates}}
+                <label class="template-option">
+                  <input type="checkbox" name="template_id" value="{{.ID}}">
+                  <span>{{.Title}} <span class="muted">({{.PlannedMinutes}} min)</span></span>
+                </label>
+              {{end}}
+            {{else}}
+              <p class="muted">Noch keine Aufgaben-Vorlagen angelegt. Aufgaben können später im Auftrag ergänzt werden.</p>
+            {{end}}
+            <small class="muted">Mehrfachauswahl möglich. Das Soll ergibt sich aus der Summe dieser Aufgaben.</small>
+          </fieldset>
           <button type="submit">Auftrag erstellen</button>
         </form>
       </article>
