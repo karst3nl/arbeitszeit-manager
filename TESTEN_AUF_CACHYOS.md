@@ -1,8 +1,8 @@
 # Test-Anleitung für CachyOS (lokal am PC)
 
 Diese Anleitung erklärt, wie du die komplette Testsuite und einen Smoke-Test
-der Webapp **auf deinem CachyOS-PC** ausführst – ganz ohne Raspberry Pi, ohne
-Docker und ohne GitHub-Zugriff. Das Repo bleibt lokal.
+der Webapp **auf einem CachyOS-PC** ausführst – ganz ohne Raspberry Pi und ohne
+Docker. Das Repo ist öffentlich, du kannst es auf jedem PC frisch clonen.
 
 ---
 
@@ -10,7 +10,7 @@ Docker und ohne GitHub-Zugriff. Das Repo bleibt lokal.
 
 ```bash
 sudo pacman -Syu
-sudo pacman -S --needed go make curl base-devel
+sudo pacman -S --needed go make git curl base-devel
 go version
 ```
 
@@ -24,12 +24,25 @@ C-Compiler). Für die normalen Tests reicht `go`.
 
 ---
 
-## 2. Ins Projektverzeichnis wechseln
+## 2. Repo clonen und ins Projektverzeichnis wechseln
 
-Passe den Pfad an, falls du das Projekt anderswo liegen hast:
+Auf einem **frischen PC** das öffentliche Repo holen:
+
+```bash
+cd ~
+git clone https://github.com/karst3nl/arbeitszeit-manager.git
+cd arbeitszeit-manager
+```
+
+Falls das Repo schon lokal liegt, einfach dorthin wechseln (Pfad anpassen):
 
 ```bash
 cd ~/Projekte/opencode/arbeitszeit-manager
+```
+
+Danach kurz prüfen:
+
+```bash
 pwd
 ls
 ```
@@ -92,13 +105,25 @@ Erwartung: `Nutzer "admin" (ID 1, Rolle admin) angelegt.`
 In **einem eigenen Terminal**:
 
 ```bash
-cd ~/Projekte/opencode/arbeitszeit-manager
+cd ~/arbeitszeit-manager   # oder dein lokaler Pfad
 ./arbeitszeit-manager -addr 127.0.0.1:18080 -db ./data/test.db
 ```
 
 Erwartung: `listening on 127.0.0.1:18080 (db: ./data/test.db, version: …)`
 
 Der Server läuft jetzt. Mit **Strg+C** beenden (sauberer SIGINT-Shutdown).
+
+**Von einem anderen Gerät im LAN zugreifen?** Dann nicht auf Loopback binden,
+sondern auf alle Interfaces:
+
+```bash
+./arbeitszeit-manager -addr :8080 -db ./data/test.db
+```
+
+Danach `http://<IP-des-PCs>:8080` im Browser öffnen. Falls eine Firewall aktiv
+ist (z. B. ufw), den Port freigeben: `sudo ufw allow 8080/tcp`.
+Hinweis: Bei HTTP gehen Passwörter unverschlüsselt durchs Netz – für einen
+echten LAN-Betrieb später HTTPS über Nginx nutzen (siehe `deploy/README.md`).
 
 ### 4.3 Kurzcheck per curl (zweites Terminal)
 
@@ -200,7 +225,9 @@ rm -rf ./data       # Test-Datenbank löschen
 ## 8. Kurzfassung zum Kopieren
 
 ```bash
-cd ~/Projekte/opencode/arbeitszeit-manager
+# Nur auf einem frischen PC:
+git clone https://github.com/karst3nl/arbeitszeit-manager.git && cd arbeitszeit-manager
+
 go mod download && gofmt -l . && go vet ./... && go test ./...
 make build
 mkdir -p data
@@ -209,3 +236,5 @@ mkdir -p data
 # Terminal 2:
 curl -sS http://127.0.0.1:18080/healthz
 ```
+
+Für LAN-Zugriff oben `-addr :8080` verwenden und `http://<IP-des-PCs>:8080` öffnen.
