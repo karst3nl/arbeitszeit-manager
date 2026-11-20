@@ -106,12 +106,15 @@ In **einem eigenen Terminal**:
 
 ```bash
 cd ~/arbeitszeit-manager   # oder dein lokaler Pfad
-./arbeitszeit-manager -addr 127.0.0.1:18080 -db ./data/test.db
+./arbeitszeit-manager -addr 127.0.0.1:8080 -db ./data/test.db
 ```
 
-Erwartung: `listening on 127.0.0.1:18080 (db: ./data/test.db, version: …)`
+Erwartung: `listening on 127.0.0.1:8080 (db: ./data/test.db, version: …)`
 
 Der Server läuft jetzt. Mit **Strg+C** beenden (sauberer SIGINT-Shutdown).
+Port `8080` ist der Standard der App; falls er auf dem PC belegt ist, einfach
+einen anderen nehmen (z. B. `-addr 127.0.0.1:8081`) und in allen curl-/Browser-
+URLs denselben Port verwenden.
 
 **Von einem anderen Gerät im LAN zugreifen?** Dann nicht auf Loopback binden,
 sondern auf alle Interfaces:
@@ -128,10 +131,10 @@ echten LAN-Betrieb später HTTPS über Nginx nutzen (siehe `deploy/README.md`).
 ### 4.3 Kurzcheck per curl (zweites Terminal)
 
 ```bash
-curl -sS http://127.0.0.1:18080/healthz
+curl -sS http://127.0.0.1:8080/healthz
 # {"status":"ok"}
 
-curl -sS -D - -o /dev/null http://127.0.0.1:18080/login \
+curl -sS -D - -o /dev/null http://127.0.0.1:8080/login \
   | grep -i 'HTTP/\|cache-control'
 # HTTP/1.1 200 OK
 # Cache-Control: no-store
@@ -140,7 +143,7 @@ curl -sS -D - -o /dev/null http://127.0.0.1:18080/login \
 ### 4.4 Kompletter Ablauf per curl (Login → Auftrag → Timer → CSV)
 
 ```bash
-BASE=http://127.0.0.1:18080
+BASE=http://127.0.0.1:8080
 JAR=/tmp/azm-cookies.txt
 
 # CSRF-Token von der Login-Seite holen
@@ -177,7 +180,7 @@ normal, dann wird nur die Zielseite nicht mitgeladen.
 
 ### 4.5 Alternativ: im Browser klicken
 
-1. <http://127.0.0.1:18080/login> öffnen
+1. <http://127.0.0.1:8080/login> öffnen
 2. Anmelden mit `admin` / `testpass123`
 3. Auftrag anlegen → Aufgabe mit geplanten Minuten → Timer Start/Pause/Weiter/Ende
 4. „Auswertung ansehen" und den CSV-Export prüfen
@@ -217,7 +220,7 @@ rm -rf ./data       # Test-Datenbank löschen
 | `go test -race` scheitert an fehlendem C-Compiler | `sudo pacman -S base-devel` |
 | `curl: (7) Failed to connect` | Server läuft nicht oder anderer Port; Adresse prüfen |
 | `403` bei POST-Requests | CSRF-Token neu von `/login` holen und Cookies mit `-b/-c` mitschicken |
-| `address already in use` | Anderen Port wählen, z. B. `-addr 127.0.0.1:18081` |
+| `address already in use` | Anderen Port wählen, z. B. `-addr 127.0.0.1:8081` |
 | `attempt to write a readonly database` | Test-DB nicht als `root` anlegen; `./data` gehört dem eigenen User |
 
 ---
@@ -232,9 +235,9 @@ go mod download && gofmt -l . && go vet ./... && go test ./...
 make build
 mkdir -p data
 ./arbeitszeit-manager admin create-user -db data/test.db -username admin -role admin -password testpass123
-./arbeitszeit-manager -addr 127.0.0.1:18080 -db data/test.db   # Terminal 1, Ende mit Strg+C
+./arbeitszeit-manager -addr 127.0.0.1:8080 -db data/test.db   # Terminal 1, Ende mit Strg+C
 # Terminal 2:
-curl -sS http://127.0.0.1:18080/healthz
+curl -sS http://127.0.0.1:8080/healthz
 ```
 
 Für LAN-Zugriff oben `-addr :8080` verwenden und `http://<IP-des-PCs>:8080` öffnen.
