@@ -1,14 +1,14 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 {{template "header" .}}
-<p class="muted">Für dieses Team ausgelegt: beliebig viele Konten, mindestens sechs vorgesehen.</p>
+<p class="muted page-intro">Für dieses Team ausgelegt: beliebig viele Konten, mindestens sechs vorgesehen.</p>
 
 <div class="page-columns side-first">
-  <aside class="col-side">
-    <article>
+  <section class="col-side">
+    <article class="card">
       <h2>Neuer Nutzer</h2>
       <form method="post" action="/admin/users">
         {{template "csrf" .}}
-        <div class="grid">
+        <div class="form-grid">
           <label>Benutzername
             <input name="username" required maxlength="80" autocomplete="off">
           </label>
@@ -25,22 +25,28 @@
             </select>
           </label>
         </div>
-        <button type="submit">Nutzer anlegen</button>
+        <div class="actions">
+          <button type="submit">Nutzer anlegen</button>
+        </div>
       </form>
     </article>
 
-    <article>
+    <article class="card">
       <h2>Aufgaben-Vorlagen</h2>
-      <p class="muted">Stehen beim Anlegen eines Auftrags im Dropdown zur Auswahl.</p>
+      <p class="muted">Stehen beim Anlegen eines Auftrags zur Auswahl.</p>
       <form method="post" action="/admin/task-templates">
         {{template "csrf" .}}
-        <label>Bezeichnung
-          <input name="title" required maxlength="200" placeholder="z. B. Konzeption">
-        </label>
-        <label>Geplante Minuten
-          <input type="number" name="planned" min="0" max="60000" value="30" required>
-        </label>
-        <button type="submit" class="secondary">Vorlage anlegen</button>
+        <div class="form-grid compact">
+          <label>Bezeichnung
+            <input name="title" required maxlength="200" placeholder="z. B. Konzeption">
+          </label>
+          <label>Geplante Minuten
+            <input type="number" name="planned" min="0" max="60000" value="30" required>
+          </label>
+        </div>
+        <div class="actions">
+          <button type="submit" class="secondary">Vorlage anlegen</button>
+        </div>
       </form>
       {{if .TaskTemplates}}
         <table>
@@ -48,13 +54,13 @@
           <tbody>
             {{range .TaskTemplates}}
               <tr>
-                <td>{{.Title}}</td>
-                <td>{{.PlannedMinutes}}</td>
-                <td>
-                  <form method="post" action="/admin/task-templates/{{.ID}}/delete" class="inline"
+                <td data-label="Aufgabe">{{.Title}}</td>
+                <td data-label="Min.">{{.PlannedMinutes}}</td>
+                <td class="actions-cell">
+                  <form method="post" action="/admin/task-templates/{{.ID}}/delete" class="inline table-actions"
                         onsubmit="return confirm('Vorlage wirklich löschen?');">
                     {{template "csrf" $}}
-                    <button type="submit" class="outline secondary">Löschen</button>
+                    <button type="submit" class="danger">Löschen</button>
                   </form>
                 </td>
               </tr>
@@ -65,37 +71,41 @@
         <p class="muted">Noch keine Vorlagen angelegt.</p>
       {{end}}
     </article>
-  </aside>
+  </section>
 
-  <div class="col-main">
-    <article>
+  <section class="col-main">
+    <article class="card">
       <h2>Bestehende Nutzer</h2>
       <table>
         <thead><tr><th>Benutzername</th><th>Anzeigename</th><th>Rolle</th><th>Status</th><th></th></tr></thead>
         <tbody>
           {{range .Users}}
             <tr>
-              <td>{{.Username}}</td>
-              <td>{{.DisplayName}}</td>
-              <td>{{if .IsAdmin}}Admin{{else}}Nutzer{{end}}</td>
-              <td>{{if .Active}}aktiv{{else}}deaktiviert{{end}}</td>
-              <td>
+              <td data-label="Benutzername">{{.Username}}</td>
+              <td data-label="Anzeigename">{{.DisplayName}}</td>
+              <td data-label="Rolle">{{if .IsAdmin}}Admin{{else}}Nutzer{{end}}</td>
+              <td data-label="Status">{{if .Active}}aktiv{{else}}deaktiviert{{end}}</td>
+              <td class="actions-cell">
                 {{if ne .ID $.User.ID}}
-                  <form method="post" action="/admin/users/{{.ID}}/active" class="inline">
-                    {{template "csrf" $}}
-                    <input type="hidden" name="active" value="{{if .Active}}0{{else}}1{{end}}">
-                    <button type="submit" class="outline secondary">
-                      {{if .Active}}Deaktivieren{{else}}Aktivieren{{end}}
-                    </button>
-                  </form>
-                  <details>
-                    <summary>Passwort zurücksetzen</summary>
-                    <form method="post" action="/admin/users/{{.ID}}/password">
+                  <div class="table-actions">
+                    <form method="post" action="/admin/users/{{.ID}}/active" class="inline">
                       {{template "csrf" $}}
-                      <input type="password" name="password" minlength="8" placeholder="Neues Passwort" required>
-                      <button type="submit" class="secondary">Setzen</button>
+                      <input type="hidden" name="active" value="{{if .Active}}0{{else}}1{{end}}">
+                      <button type="submit" class="secondary">
+                        {{if .Active}}Deaktivieren{{else}}Aktivieren{{end}}
+                      </button>
                     </form>
-                  </details>
+                    <details>
+                      <summary>Passwort zurücksetzen</summary>
+                      <form method="post" action="/admin/users/{{.ID}}/password">
+                        {{template "csrf" $}}
+                        <input type="password" name="password" minlength="8" placeholder="Neues Passwort" required>
+                        <div class="actions">
+                          <button type="submit" class="secondary">Setzen</button>
+                        </div>
+                      </form>
+                    </details>
+                  </div>
                 {{end}}
               </td>
             </tr>
@@ -103,6 +113,6 @@
         </tbody>
       </table>
     </article>
-  </div>
+  </section>
 </div>
 {{template "footer" .}}

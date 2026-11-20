@@ -1,18 +1,21 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 {{template "header" .}}
+
 <div class="page-columns even">
-  <article>
+  <article class="card">
     <h2>Anzeigename</h2>
     <form method="post" action="/account/display-name">
       {{template "csrf" .}}
       <label>Name
         <input name="display_name" value="{{.User.DisplayName}}" maxlength="120" required>
       </label>
-      <button type="submit" class="secondary">Speichern</button>
+      <div class="actions">
+        <button type="submit" class="secondary">Speichern</button>
+      </div>
     </form>
   </article>
 
-  <article>
+  <article class="card">
     <h2>Passwort ändern</h2>
     <p class="muted">Nach der Änderung werden alle anderen Geräte abgemeldet.</p>
     <form method="post" action="/account/password">
@@ -26,7 +29,9 @@
       <label>Neues Passwort wiederholen
         <input type="password" name="repeat_password" required minlength="8" autocomplete="new-password">
       </label>
-      <button type="submit">Passwort ändern</button>
+      <div class="actions">
+        <button type="submit">Passwort ändern</button>
+      </div>
     </form>
   </article>
 </div>

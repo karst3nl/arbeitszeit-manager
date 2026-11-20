@@ -1,12 +1,14 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 {{template "header" .}}
-<p><a href="/">← Alle Aufträge</a></p>
 
-<p class="page-title">{{.Order.Title}}</p>
+<div class="section-head">
+  <p class="page-title">{{.Order.Title}}</p>
+  <p><a href="/">← Alle Aufträge</a></p>
+</div>
 {{if .Order.Description}}<p class="muted">{{.Order.Description}}</p>{{end}}
 
 <div class="page-columns">
-  <div class="col-main">
+  <section class="col-main">
     <p class="muted">
       Erstellt von {{.Order.OwnerName}} · {{date .Order.CreatedAt}}
       {{if .Order.AssigneeName}} · Bearbeitet von {{.Order.AssigneeName}}{{end}}
@@ -18,16 +20,16 @@
 
     {{template "timer" .}}
 
-    <section>
+    <article class="card">
       <h2>Soll-Zeit</h2>
       <p>
         Aktuelles Soll: <strong>{{minutes .Order.PlannedMinutes}}</strong>
         <span class="muted">(Summe der geplanten Aufgabenzeiten)</span>
       </p>
       <p class="muted">Das Soll passt sich automatisch an, wenn Aufgaben ergänzt oder ihre Minuten geändert werden.</p>
-    </section>
+    </article>
 
-    <section>
+    <article class="card">
       <h2>Aufgaben</h2>
       {{if .Tasks}}
         <div class="task-list">
@@ -35,7 +37,7 @@
             <div class="task-row">
               <form method="post" action="/orders/{{$.Order.ID}}/tasks/{{.ID}}" class="task-form">
                 {{template "csrf" $}}
-                <label class="task-done">
+                <label class="checkbox">
                   <input type="checkbox" name="done" {{if .Done}}checked{{end}} aria-label="Erledigt">
                 </label>
                 <input name="title" value="{{.Title}}" maxlength="200" aria-label="Aufgabe">
@@ -44,7 +46,7 @@
               </form>
               <form method="post" action="/orders/{{$.Order.ID}}/tasks/{{.ID}}/delete" class="inline">
                 {{template "csrf" $}}
-                <button type="submit" class="outline secondary">Löschen</button>
+                <button type="submit" class="danger">Löschen</button>
               </form>
             </div>
           {{end}}
@@ -55,7 +57,7 @@
 
       <form method="post" action="/orders/{{.Order.ID}}/tasks">
         {{template "csrf" .}}
-        <div class="grid">
+        <div class="form-grid compact">
           <label>Neue Aufgabe
             <input name="title" required maxlength="200" placeholder="was ist zu tun?">
           </label>
@@ -63,13 +65,15 @@
             <input type="number" name="planned" min="0" max="60000" value="30" required>
           </label>
         </div>
-        <button type="submit">Hinzufügen</button>
+        <div class="actions">
+          <button type="submit">Hinzufügen</button>
+        </div>
       </form>
-    </section>
-  </div>
+    </article>
+  </section>
 
   <aside class="col-side">
-    <section>
+    <article class="card">
       <h2>Zuordnung</h2>
       <form method="post" action="/orders/{{.Order.ID}}/assignee">
         {{template "csrf" .}}
@@ -81,19 +85,23 @@
             {{end}}
           </select>
         </label>
-        <button type="submit" class="secondary">Speichern</button>
+        <div class="actions">
+          <button type="submit" class="secondary">Speichern</button>
+        </div>
       </form>
-    </section>
+    </article>
 
-    <section>
+    <article class="card">
       <h2>Auftrag löschen</h2>
       <p class="muted">Löscht den Auftrag unwiderruflich zusammen mit Aufgaben, Zeiten und Auswertung.</p>
       <form method="post" action="/orders/{{.Order.ID}}/delete"
             onsubmit="return confirm('Auftrag wirklich löschen?');">
         {{template "csrf" .}}
-        <button type="submit" class="outline secondary">Auftrag löschen</button>
+        <div class="actions">
+          <button type="submit" class="danger">Auftrag löschen</button>
+        </div>
       </form>
-    </section>
+    </article>
   </aside>
 </div>
 {{template "footer" .}}

@@ -8,15 +8,15 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ### Hinzugefügt
 - Admin-Startseite rechts nutzerzentriert: andere Nutzer mit ihren zugeteilten Aufträgen sowie eine Rubrik „Nicht zugeteilt“; Zählerleiste und Filter bleiben erhalten
 - Zählerleiste über der Auftragsliste für offene, laufende und abgeschlossene Aufträge; Klick filtert die Liste, Zähler bleiben vollständig und aktualisieren sich alle 30 Sekunden
-- Desktop-Oberfläche mit fester Seitenleiste und Statusleiste ab 1100 px; Navigation zeigt den aktiven Bereich
+- Komplett neue Oberfläche im Stil der Home-Assistant-Finance-App: obere Navigation mit aktivem Bereich, Kartenraster, kompakte Tabellen und helle/dunkle HA-Farbvariablen; PicoCSS und Desktop-Seitenleiste entfallen
 - Startseite nach Rolle: Admins sehen alle offenen und in Bearbeitung befindlichen Aufträge plus Formular zum Anlegen; Nutzer nur die ihnen zugewiesenen Aufträge
 - Aufgaben-Vorlagen im Adminbereich; beim Anlegen eines Auftrags sind mehrere Vorlagen per Mehrfachauswahl wählbar und werden direkt kopiert
-- Desktop-Layout: breitere Ansicht und zweispaltige Seiten ab 1100 px; Smartphone-Layout bleibt unverändert
+- Responsives Layout: breitere zweispaltige Ansicht am Desktop, auf schmalen Displays stapeln sich die Karten und Tabellen werden zu Karten mit Beschriftungen
 - Auftragstitel wird automatisch aus Kundenname und Kennzeichen gebildet
 - Soll-Zeit ist ausschließlich die Summe der geplanten Minuten aller Aufgaben und passt sich bei Änderungen automatisch an; das separate Soll-Feld entfällt
 
 ### Geändert
-- Obere Brotkrümelleiste und große Seitenüberschriften entfernt; die Seitenleiste zeigt den aktiven Bereich, Auftrags- und Auswertungstitel bleiben als kompakte Zeile erhalten
+- Große Seitenüberschriften entfernt; Auftrags- und Auswertungstitel bleiben als kompakte Zeile, Navigation und angemeldeter Nutzer stehen in der oberen Leiste
 
 ### Behoben
 - Live-Ist-Zeit in Übersicht und Aufträgen während eines laufenden Timers

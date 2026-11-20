@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 {{define "timer"}}
-<div id="timer" class="timer" hx-get="/orders/{{.Order.ID}}/timer" hx-trigger="every 30s" hx-swap="outerHTML">
+<div id="timer" class="card timer" hx-get="/orders/{{.Order.ID}}/timer" hx-trigger="every 30s" hx-swap="outerHTML">
   {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
   <div class="timer-main">
     <span id="timer-display" class="timer-time"

@@ -3,92 +3,44 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{{.Title}} · Arbeitszeit-Manager</title>
-  <link rel="stylesheet" href="/static/vendor/pico.min.css?v={{.Version}}">
   <link rel="stylesheet" href="/static/app.css?v={{.Version}}">
   <script src="/static/vendor/htmx.min.js?v={{.Version}}" defer></script>
-  <script src="/static/vendor/alpine.min.js?v={{.Version}}" defer></script>
   <script src="/static/tick.js?v={{.Version}}" defer></script>
 </head>
 <body class="{{if .User}}authenticated{{else}}anonymous{{end}}">
   <header class="topbar">
-    <nav class="container">
-      <ul>
-        <li><strong><a href="/">⏱ Arbeitszeit</a></strong></li>
-      </ul>
-      <ul>
-        {{if .User}}
-          <li><a href="/account">Konto</a></li>
-          <li><a href="/about">Über</a></li>
-          {{if .User.IsAdmin}}<li><a href="/admin">Nutzer</a></li>{{end}}
-          <li class="muted">{{.User.DisplayName}}</li>
-          <li>
-            <form method="post" action="/logout" class="inline">
-              {{template "csrf" .}}
-              <button type="submit" class="outline secondary">Abmelden</button>
-            </form>
-          </li>
-        {{end}}
-      </ul>
-    </nav>
-  </header>
-
-  {{if .User}}
-  <div class="app-shell">
-    <aside class="sidebar">
-      <a class="sidebar-brand" href="/">⏱ <span>Arbeitszeit</span></a>
-      <nav class="sidebar-nav">
-        <a href="/" data-nav="orders" {{if eq .Nav "orders"}}class="active"{{end}}>
-          <span class="nav-icon">☰</span>Aufträge</a>
+    <strong class="brand"><a href="/">⏱ Arbeitszeit</a></strong>
+    {{if .User}}
+      <nav aria-label="Hauptnavigation">
+        <a href="/" {{if eq .Nav "orders"}}class="active"{{end}}>Aufträge</a>
         {{if .User.IsAdmin}}
-          <a href="/admin" data-nav="admin" {{if eq .Nav "admin"}}class="active"{{end}}>
-            <span class="nav-icon">♙</span>Nutzer &amp; Vorlagen</a>
+          <a href="/admin" {{if eq .Nav "admin"}}class="active"{{end}}>Nutzer &amp; Vorlagen</a>
         {{end}}
-        <a href="/account" data-nav="account" {{if eq .Nav "account"}}class="active"{{end}}>
-          <span class="nav-icon">◎</span>Konto</a>
-        <a href="/about" data-nav="about" {{if eq .Nav "about"}}class="active"{{end}}>
-          <span class="nav-icon">ⓘ</span>Über</a>
+        <a href="/account" {{if eq .Nav "account"}}class="active"{{end}}>Konto</a>
+        <a href="/about" {{if eq .Nav "about"}}class="active"{{end}}>Über</a>
       </nav>
-      <div class="sidebar-user">
-        <span class="avatar">{{upperFirst .User.DisplayName}}</span>
-        <div>
-          <strong>{{.User.DisplayName}}</strong>
-          <span class="muted">{{if .User.IsAdmin}}Administrator{{else}}Nutzer{{end}}</span>
-        </div>
+      <div class="topbar-user">
+        <span class="muted">{{.User.DisplayName}}</span>
         <form method="post" action="/logout" class="inline">
           {{template "csrf" .}}
-          <button type="submit" class="outline secondary">Abmelden</button>
+          <button type="submit" class="link-button">Abmelden</button>
         </form>
       </div>
-    </aside>
+    {{end}}
+  </header>
 
-    <main class="app-main">
-      {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
-      {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
-  {{else}}
-    <main class="app-main login-main">
-      {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
-      {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
-  {{end}}
+  <main class="app-main">
+    {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
 {{end}}
 
 {{define "footer"}}
-    {{if .User}}
-    </main>
-    <footer class="app-status">
-      <span>Arbeitszeit-Manager · Freie Software unter AGPL-3.0</span>
-      <span><a href="/about">Über</a>{{if .Version}} · v{{.Version}}{{end}}</span>
-    </footer>
-  </div>
-    {{else}}
-    </main>
-    {{end}}
-
-  <footer class="container page-footer muted">
-    <a href="/about">Arbeitszeit-Manager</a> · Freie Software unter AGPL-3.0 ·
-    <a href="https://github.com/karst3nl/arbeitszeit-manager">Quelltext</a>
-    {{if .Version}} · v{{.Version}}{{end}}
+  </main>
+  <footer class="page-footer muted">
+    <span>Arbeitszeit-Manager · Freie Software unter AGPL-3.0</span>
+    <span><a href="/about">Über</a>{{if .Version}} · v{{.Version}}{{end}}</span>
   </footer>
 </body>
 </html>

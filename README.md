@@ -19,7 +19,7 @@ Schlanke Webapp für Arbeitsaufträge mit geplanten Zeiten, einem Timer für die
 - **Zählerleiste**: Offen / Läuft / Abgeschlossen mit anklickbaren Zählern zum Filtern; Zähler und Liste aktualisieren sich automatisch alle 30 Sekunden
 - **Pflege**: Aufträge löschen (nicht bei laufendem Timer), Übersicht aktualisiert sich automatisch alle 30 Sekunden
 - **Robust**: SQLite im WAL-Modus, Backup-Skript, Reboot-Recovery für hängende Timer
-- **Responsiv**: kompakte Ansicht fürs Smartphone, am Desktop automatisch eine App-Oberfläche mit fester Seitenleiste und Statusleiste – ohne separate App oder Umschalter
+- **Responsiv**: Oberfläche im Stil der Home-Assistant-Finance-App mit oberer Navigation und Karten; auf Smartphones scrollbare Reiter und Karten statt Tabellen – ohne separate App oder Umschalter
 - **Offline-fähig**: keine CDNs, keine externen Dienste, alle Assets liegen im Repo
 - **Schlank**: ein Binary, ~20 MB RAM für die App, kein Docker nötig
 

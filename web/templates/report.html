@@ -1,13 +1,19 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 {{template "header" .}}
-<p><a href="/orders/{{.Report.OrderID}}">← Zum Auftrag</a></p>
 
-<p class="page-title">Auswertung · {{.Report.Title}}</p>
-<p><a class="button secondary" href="/orders/{{.Report.OrderID}}/report.csv">CSV herunterladen</a></p>
-<p class="muted">Abgeschlossen am {{date .Report.CreatedAt}}</p>
+<div class="section-head">
+  <div>
+    <p class="page-title">Auswertung · {{.Report.Title}}</p>
+    <p class="muted">Abgeschlossen am {{date .Report.CreatedAt}}</p>
+  </div>
+  <div class="table-actions">
+    <a class="button" href="/orders/{{.Report.OrderID}}/report.csv">CSV herunterladen</a>
+    <a href="/orders/{{.Report.OrderID}}">← Zum Auftrag</a>
+  </div>
+</div>
 
 <div class="page-columns">
-  <article class="col-main">
+  <article class="card col-main">
     <h2>Soll / Ist</h2>
     <div class="figures big">
       <div><span class="muted">Soll</span><strong>{{minutes .Report.PlannedMinutes}}</strong></div>
@@ -31,14 +37,14 @@
   </article>
 
   <aside class="col-side">
-    <article>
+    <article class="card">
       <h2>Geplante Aufgaben</h2>
       {{if .Report.Tasks}}
         <table>
           <thead><tr><th>Aufgabe</th><th>Geplant</th></tr></thead>
           <tbody>
             {{range .Report.Tasks}}
-              <tr><td>{{.Title}}</td><td>{{minutes .PlannedMinutes}}</td></tr>
+              <tr><td data-label="Aufgabe">{{.Title}}</td><td data-label="Geplant">{{minutes .PlannedMinutes}}</td></tr>
             {{end}}
           </tbody>
         </table>
@@ -47,12 +53,14 @@
       {{end}}
     </article>
 
-    <article>
+    <article class="card">
       <h2>Notiz</h2>
       <form method="post" action="/orders/{{.Report.OrderID}}/notes">
         {{template "csrf" .}}
         <textarea name="notes" rows="4" maxlength="5000" placeholder="Was lief gut, was war unerwartet?">{{.Report.Notes}}</textarea>
-        <button type="submit" class="secondary">Notiz speichern</button>
+        <div class="actions">
+          <button type="submit" class="secondary">Notiz speichern</button>
+        </div>
       </form>
     </article>
   </aside>

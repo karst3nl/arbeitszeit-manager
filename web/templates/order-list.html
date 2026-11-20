@@ -1,9 +1,9 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 {{define "order-cards"}}
 {{if .}}
-  <div class="grid cards">
+  <div class="cards">
     {{range .}}
-      <article class="order-card">
+      <article class="card order-card">
         <header>
           <strong><a href="/orders/{{.ID}}">{{.Title}}</a></strong>
         </header>
@@ -58,19 +58,19 @@
 {{end}}
 
 {{define "order-list"}}
-  <section class="order-group">
+  <section class="card order-group">
     <h2>Offene Aufträge <span class="count">{{.CountOpen}}</span></h2>
     <p class="muted">Noch nicht begonnen{{if .User.IsAdmin}} oder keiner Person zugewiesen{{end}}.</p>
     {{template "order-cards" .OpenOrders}}
   </section>
 
-  <section class="order-group">
+  <section class="card order-group">
     <h2>In Bearbeitung <span class="count">{{.CountActive}}</span></h2>
     <p class="muted">Timer läuft oder ist pausiert.</p>
     {{template "order-cards" .ActiveOrders}}
   </section>
 
-  <details class="order-group collapsed"{{if eq .OrderFilter "done"}} open{{end}}>
+  <details class="card order-group collapsed"{{if eq .OrderFilter "done"}} open{{end}}>
     <summary>Abgeschlossen ({{.CountDone}})</summary>
     {{template "order-cards" .DoneOrders}}
   </details>

@@ -6,7 +6,7 @@
 
 {{define "admin-user-list"}}
   {{if .Unassigned}}
-    <section class="order-group">
+    <section class="card order-group">
       <h2>Nicht zugeteilt <span class="count">{{len .Unassigned}}</span></h2>
       <p class="muted">Noch keinem Nutzer zugewiesen.</p>
       {{template "order-cards" .Unassigned}}
@@ -14,7 +14,7 @@
   {{end}}
 
   {{range .UserOrders}}
-    <section class="order-group user-orders">
+    <section class="card order-group user-orders">
       <h2>{{.User.DisplayName}} <span class="muted">@{{.User.Username}}</span></h2>
       <p class="muted user-counts">
         Offen <strong>{{.CountOpen}}</strong> ·

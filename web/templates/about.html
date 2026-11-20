@@ -1,9 +1,9 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 {{template "header" .}}
-<article class="prose">
+<article class="card prose">
   <hgroup>
     <h2>Arbeitszeit-Manager</h2>
-    <p>Version {{if .Version}}{{.Version}}{{else}}dev{{end}}</p>
+    <p class="muted">Version {{if .Version}}{{.Version}}{{else}}dev{{end}}</p>
   </hgroup>
   <p>
     Arbeitsaufträge anlegen, die tatsächliche Arbeitszeit mit einem Timer erfassen
