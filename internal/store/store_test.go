@@ -76,6 +76,22 @@ func TestOrderSollIsExplicit(t *testing.T) {
 	}
 }
 
+func TestSetTaskDoneKeepsTitle(t *testing.T) {
+	s := testStore(t)
+	id := setupOrder(t, s)
+
+	if err := s.SetTaskDone(id, 1, true); err != nil {
+		t.Fatal(err)
+	}
+	tasks, err := s.Tasks(id)
+	if err != nil || len(tasks) != 2 {
+		t.Fatalf("tasks: %+v, %v", tasks, err)
+	}
+	if tasks[0].Title != "Konzeption" || !tasks[0].Done || tasks[1].Done {
+		t.Fatalf("unexpected task state: %+v", tasks)
+	}
+}
+
 func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 	s := testStore(t)
 	templateID, err := s.CreateTaskTemplate("Konzeption")
@@ -509,27 +525,6 @@ func TestLastActiveAdminIsProtected(t *testing.T) {
 	}
 	if err := s.SetUserActive(second, false); !errors.Is(err, ErrLastAdmin) {
 		t.Fatalf("deactivating the last admin: %v", err)
-	}
-}
-
-func TestClaimOrderIsAtomic(t *testing.T) {
-	s := testStore(t)
-	id := setupOrder(t, s)
-	if err := s.SetAssignee(id, 0); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.CreateUser("mia", "Mia", "hash", "user"); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.ClaimOrder(id, 2); err != nil {
-		t.Fatalf("first claim: %v", err)
-	}
-	if err := s.ClaimOrder(id, 3); !errors.Is(err, ErrConflict) {
-		t.Fatalf("second claim should conflict, got %v", err)
-	}
-	o, err := s.Order(id)
-	if err != nil || o.AssigneeID != 2 {
-		t.Fatalf("assignee after claim: %+v, %v", o, err)
 	}
 }
 

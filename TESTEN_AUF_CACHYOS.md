@@ -196,7 +196,8 @@ normal, dann wird nur die Zielseite nicht mitgeladen.
 2. Anmelden mit `admin` / `testpass123`
 3. Unter **Nutzer & Vorlagen** den AW-Faktor ändern und eine Aufgaben-Vorlage anlegen (auch umbenennen/löschen testen), dann einen Auftrag mit Soll in AW, gewähltem Nutzer und optional mehreren Vorlagen aus dem Dropdown anlegen; neue Aufgaben lassen sich direkt im Dropdown anlegen → Timer Start/Pause/Weiter/Ende
 4. Im Auftrag und in „Auswertung ansehen" den **Zeitverlauf** mit Übergabe, Starts, Pausendauer und Ende prüfen; den CSV-Export ebenfalls prüfen
-5. Oben rechts **Konto** (Passwort ändern) und **Nutzer** ( Admin-Seite) testen
+5. Mit einem normalen Nutzer anmelden: Die **Zuordnung** ist nur lesbar, es gibt kein Formular zum Anlegen/Bearbeiten/Löschen von Aufgaben; Aufgaben lassen sich nur abhaken
+6. Oben rechts **Konto** (Passwort ändern) und **Nutzer** ( Admin-Seite) testen
 
 ---
 

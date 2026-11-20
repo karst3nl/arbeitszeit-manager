@@ -1,5 +1,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 {{template "header" .}}
+{{$canManage := or .User.IsAdmin (eq .Order.OwnerID .User.ID)}}
 
 <div class="section-head">
   <p class="page-title">{{.Order.Title}}</p>
@@ -71,18 +72,29 @@
         <div class="task-list">
           {{range .Tasks}}
             <div class="task-row">
-              <form method="post" action="/orders/{{$.Order.ID}}/tasks/{{.ID}}" class="task-form">
-                {{template "csrf" $}}
-                <label class="checkbox">
-                  <input type="checkbox" name="done" {{if .Done}}checked{{end}} aria-label="Erledigt">
-                </label>
-                <input name="title" value="{{.Title}}" maxlength="200" aria-label="Aufgabe">
-                <button type="submit" class="secondary">Speichern</button>
-              </form>
-              <form method="post" action="/orders/{{$.Order.ID}}/tasks/{{.ID}}/delete" class="inline">
-                {{template "csrf" $}}
-                <button type="submit" class="danger">Löschen</button>
-              </form>
+              {{if $canManage}}
+                <form method="post" action="/orders/{{$.Order.ID}}/tasks/{{.ID}}" class="task-form">
+                  {{template "csrf" $}}
+                  <label class="checkbox">
+                    <input type="checkbox" name="done" {{if .Done}}checked{{end}} aria-label="Erledigt">
+                  </label>
+                  <input name="title" value="{{.Title}}" maxlength="200" aria-label="Aufgabe">
+                  <button type="submit" class="secondary">Speichern</button>
+                </form>
+                <form method="post" action="/orders/{{$.Order.ID}}/tasks/{{.ID}}/delete" class="inline">
+                  {{template "csrf" $}}
+                  <button type="submit" class="danger">Löschen</button>
+                </form>
+              {{else}}
+                <form method="post" action="/orders/{{$.Order.ID}}/tasks/{{.ID}}" class="task-form task-status-form">
+                  {{template "csrf" $}}
+                  <label class="checkbox">
+                    <input type="checkbox" name="done" {{if .Done}}checked{{end}} aria-label="Erledigt">
+                  </label>
+                  <span class="task-title">{{.Title}}</span>
+                  <button type="submit" class="secondary">Status speichern</button>
+                </form>
+              {{end}}
             </div>
           {{end}}
         </div>
@@ -90,48 +102,63 @@
         <p class="muted">Noch keine Aufgaben erfasst.</p>
       {{end}}
 
-      <form method="post" action="/orders/{{.Order.ID}}/tasks">
-        {{template "csrf" .}}
-        <label>Neue Aufgabe
-          <input name="title" required maxlength="200" placeholder="was ist zu tun?">
-        </label>
-        <div class="actions">
-          <button type="submit">Hinzufügen</button>
-        </div>
-      </form>
+      {{if $canManage}}
+        <form method="post" action="/orders/{{.Order.ID}}/tasks">
+          {{template "csrf" .}}
+          <label>Neue Aufgabe
+            <input name="title" required maxlength="200" placeholder="was ist zu tun?">
+          </label>
+          <div class="actions">
+            <button type="submit">Hinzufügen</button>
+          </div>
+        </form>
+      {{end}}
     </article>
   </section>
 
   <aside class="col-side">
-    <article class="card">
-      <h2>Zuordnung</h2>
-      <form method="post" action="/orders/{{.Order.ID}}/assignee">
-        {{template "csrf" .}}
-        <label>Bearbeitet von
-          <select name="assignee_id">
-            <option value="0">— niemand —</option>
-            {{range .Users}}
-              <option value="{{.ID}}" {{if eq .ID $.Order.AssigneeID}}selected{{end}}>{{.DisplayName}}</option>
-            {{end}}
-          </select>
-        </label>
-        <div class="actions">
-          <button type="submit" class="secondary">Speichern</button>
-        </div>
-      </form>
-    </article>
+    {{if $canManage}}
+      <article class="card">
+        <h2>Zuordnung</h2>
+        <form method="post" action="/orders/{{.Order.ID}}/assignee">
+          {{template "csrf" .}}
+          <label>Bearbeitet von
+            <select name="assignee_id">
+              <option value="0">— niemand —</option>
+              {{range .Users}}
+                <option value="{{.ID}}" {{if eq .ID $.Order.AssigneeID}}selected{{end}}>{{.DisplayName}}</option>
+              {{end}}
+            </select>
+          </label>
+          <div class="actions">
+            <button type="submit" class="secondary">Speichern</button>
+          </div>
+        </form>
+      </article>
 
-    <article class="card">
-      <h2>Auftrag löschen</h2>
-      <p class="muted">Löscht den Auftrag unwiderruflich zusammen mit Aufgaben, Zeiten und Auswertung.</p>
-      <form method="post" action="/orders/{{.Order.ID}}/delete"
-            onsubmit="return confirm('Auftrag wirklich löschen?');">
-        {{template "csrf" .}}
-        <div class="actions">
-          <button type="submit" class="danger">Auftrag löschen</button>
-        </div>
-      </form>
-    </article>
+      <article class="card">
+        <h2>Auftrag löschen</h2>
+        <p class="muted">Löscht den Auftrag unwiderruflich zusammen mit Aufgaben, Zeiten und Auswertung.</p>
+        <form method="post" action="/orders/{{.Order.ID}}/delete"
+              onsubmit="return confirm('Auftrag wirklich löschen?');">
+          {{template "csrf" .}}
+          <div class="actions">
+            <button type="submit" class="danger">Auftrag löschen</button>
+          </div>
+        </form>
+      </article>
+    {{else}}
+      <article class="card">
+        <h2>Zuordnung</h2>
+        <p class="muted">
+          {{if .Order.AssigneeName}}
+            Bearbeitet von {{.Order.AssigneeName}}. Die Zuordnung kann nur ein Admin ändern.
+          {{else}}
+            Noch niemandem zugewiesen. Die Zuordnung erfolgt durch einen Admin.
+          {{end}}
+        </p>
+      </article>
+    {{end}}
   </aside>
 </div>
 {{template "footer" .}}

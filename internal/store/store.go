@@ -488,20 +488,6 @@ func (s *Store) SetAssignee(orderID, userID int64) error {
 	return err
 }
 
-// ClaimOrder assigns a free order to a user. The conditional UPDATE makes
-// concurrent claims safe: only the first one succeeds.
-func (s *Store) ClaimOrder(orderID, userID int64) error {
-	res, err := s.db.Exec(`UPDATE work_orders SET assignee_id = ?, assigned_at = ?
-		WHERE id = ? AND assignee_id = 0`, userID, time.Now().Unix(), orderID)
-	if err != nil {
-		return err
-	}
-	if !changed(res) {
-		return ErrConflict
-	}
-	return nil
-}
-
 // SetNotes stores the evaluation notes.
 func (s *Store) SetNotes(orderID int64, notes string) error {
 	_, err := s.db.Exec(`UPDATE work_orders SET notes = ? WHERE id = ?`, notes, orderID)
@@ -562,6 +548,21 @@ func (s *Store) AddTask(orderID int64, title string) error {
 func (s *Store) UpdateTask(orderID, id int64, title string, done bool) error {
 	res, err := s.db.Exec(`UPDATE tasks SET title = ?, done = ?
 		WHERE id = ? AND work_order_id = ?`, title, done, id, orderID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// SetTaskDone changes only the completion flag of a task. It lets assigned
+// users track progress without giving them access to the task title.
+func (s *Store) SetTaskDone(orderID, id int64, done bool) error {
+	res, err := s.db.Exec(`UPDATE tasks SET done = ?
+		WHERE id = ? AND work_order_id = ?`, done, id, orderID)
 	if err != nil {
 		return err
 	}

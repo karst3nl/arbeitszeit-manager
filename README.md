@@ -16,7 +16,8 @@ Schlanke Webapp für Arbeitsaufträge mit geplanten Zeiten, einem Timer für die
 - **Zeitverlauf**: Zeitstempel für Übergabe an den Mitarbeiter, jeden Start, jede Pause inklusive Dauer und das Ende; sichtbar im Auftrag, in der Auswertung und im CSV-Export
 - **Live-Anzeige** der Ist-Zeit mit sekündlichem Browser-Tick und 30-Sekunden-Server-Sync
 - **Auswertung** nach Abschluss: Soll, Ist und Abweichung in AW und Stunden/Minuten sowie in Prozent, Balkenvergleich, Notiz und CSV-Export
-- **Mehrnutzerfähig** (mind. 6): Login, Rollen `admin` / `user`, Sessions, CSRF-Schutz; Nutzer können sich offene Aufträge selbst zuordnen, das eigene Passwort ändern und Admins können Passwörter zurücksetzen
+- **Mehrnutzerfähig** (mind. 6): Login, Rollen `admin` / `user`, Sessions, CSRF-Schutz; Nutzer können das eigene Passwort ändern, Admins können Passwörter zurücksetzen
+- **Klar getrennte Rechte**: nur Admins und der Ersteller vergeben Aufträge und pflegen die Aufgabenliste; zugewiesene Nutzer können Aufgaben abhaken, aber keine Zuordnung ändern und keine Aufgaben anlegen, umbenennen oder löschen
 - **Rollenbasierte Startseite**: Admins sehen rechts die anderen Nutzer mit ihren zugeteilten Aufträgen sowie eine Rubrik „Nicht zugeteilt“ und links das Formular zum Anlegen neuer Aufträge; normale Nutzer sehen nur die ihnen zugewiesenen Aufträge
 - **Zählerleiste**: Offen / Läuft / Abgeschlossen mit anklickbaren Zählern zum Filtern; Zähler und Liste aktualisieren sich automatisch alle 30 Sekunden
 - **Pflege**: Aufträge löschen (nicht bei laufendem Timer), Übersicht aktualisiert sich automatisch alle 30 Sekunden

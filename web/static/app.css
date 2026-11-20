@@ -353,6 +353,7 @@ details.order-group > .cards, details.order-group > .empty-hint { margin-top: 12
   margin: 0;
 }
 .task-form label.checkbox { margin: 0; }
+.task-title { min-width: 0; color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
 .task-form button { padding: 8px 12px; font-size: 14px; }
 .task-row form.inline button { padding: 8px 12px; font-size: 14px; }
 

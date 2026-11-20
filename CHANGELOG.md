@@ -19,6 +19,7 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - Zeitverlauf mit Zeitstempeln für Übergabe, Start, Pausen inklusive Dauer und Ende in Auftrag, Auswertung und CSV; bestehende Daten werden aus den bisherigen Zeitsegmenten nachgezogen
 
 ### Geändert
+- Normale Nutzer können keine Auftragszuordnung mehr ändern (auch nicht die Selbstzuordnung freier Aufträge) und keine Aufgaben anlegen, umbenennen oder löschen; zugewiesene Aufgaben dürfen nur noch abgehakt werden
 - Aufgaben und Vorlagen haben keine einzelnen Zeitangaben mehr; Soll und Auswertung beziehen sich auf den gesamten Auftrag. Timer, Auswertung und CSV zeigen AW-Werte zusätzlich zu Stunden/Minuten
 - Große Seitenüberschriften entfernt; Auftrags- und Auswertungstitel bleiben als kompakte Zeile, Navigation und angemeldeter Nutzer stehen in der oberen Leiste
 

@@ -612,26 +612,57 @@ func TestInlineTemplateCreationKeepsOrderFormState(t *testing.T) {
 	}
 }
 
-func TestUserCanClaimUnassignedOrder(t *testing.T) {
+func TestUserCannotManageAssignmentOrTasks(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
 
 	post(t, client, base+"/orders", url.Values{
-		"csrf": {csrf}, "customer": {"Freier Auftrag"}, "plate": {"M-AB 4"}, "aw": {"10"}, "assignee_id": {"1"},
+		"csrf": {csrf}, "customer": {"Admin Auftrag"}, "plate": {"M-AB 4"}, "aw": {"10"}, "assignee_id": {"1"},
 	})
-
+	post(t, client, base+"/orders/1/tasks", url.Values{"csrf": {csrf}, "title": {"Konzeption"}})
 	post(t, client, base+"/orders/1/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"0"}})
+
 	mia, miaCSRF := loginAs(t, base, "mia")
-	body := post(t, mia, base+"/orders/1/assignee", url.Values{
+
+	// A free order cannot be claimed by a normal user any more.
+	if got := postStatus(t, mia, base+"/orders/1/assignee", url.Values{
 		"csrf": {miaCSRF}, "assignee_id": {"2"},
-	})
-	if !strings.Contains(body, "Bearbeitet von Mia") {
-		t.Fatalf("claim did not show assignee: %s", body)
+	}); got != http.StatusForbidden {
+		t.Fatalf("user claimed an unassigned order: %d", got)
+	}
+	if got := postStatus(t, mia, base+"/orders/1/tasks", url.Values{
+		"csrf": {miaCSRF}, "title": {"Heimlich"},
+	}); got != http.StatusForbidden {
+		t.Fatalf("user added a task to an unassigned order: %d", got)
 	}
 
-	body = post(t, mia, base+"/orders/1/timer/start", url.Values{"csrf": {miaCSRF}})
-	if !strings.Contains(body, "läuft") {
-		t.Fatalf("claimed order should be editable: %s", body)
+	// Only an admin assigns the order; the assignee still may not add tasks.
+	body := post(t, client, base+"/orders/1/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"2"}})
+	if !strings.Contains(body, "Bearbeitet von Mia") {
+		t.Fatalf("admin assignment failed: %s", body)
+	}
+	if got := postStatus(t, mia, base+"/orders/1/tasks", url.Values{
+		"csrf": {miaCSRF}, "title": {"Heimlich"},
+	}); got != http.StatusForbidden {
+		t.Fatalf("assigned user added a task: %d", got)
+	}
+	if got := postStatus(t, mia, base+"/orders/1/tasks/1/delete", url.Values{"csrf": {miaCSRF}}); got != http.StatusForbidden {
+		t.Fatalf("assigned user deleted a task: %d", got)
+	}
+
+	// Ticking off works, but a manipulated title field must be ignored.
+	post(t, mia, base+"/orders/1/tasks/1", url.Values{
+		"csrf": {miaCSRF}, "done": {"on"}, "title": {"Überschrieben"},
+	})
+	body = get(t, mia, base+"/orders/1")
+	if !strings.Contains(body, "Konzeption") || strings.Contains(body, "Überschrieben") {
+		t.Fatalf("user changed a task title: %s", body)
+	}
+	if !strings.Contains(body, `name="done" checked`) {
+		t.Fatalf("user could not tick off the task: %s", body)
+	}
+	if strings.Contains(body, `action="/orders/1/assignee"`) || strings.Contains(body, `action="/orders/1/tasks"`) {
+		t.Fatalf("management forms shown to normal user: %s", body)
 	}
 }
 

@@ -262,7 +262,14 @@ func canEdit(u *model.User, o *model.Order) bool {
 	if u == nil || o == nil {
 		return false
 	}
-	return u.IsAdmin() || o.OwnerID == u.ID || (o.AssigneeID != 0 && o.AssigneeID == u.ID)
+	return canManageOrder(u, o) || (o.AssigneeID != 0 && o.AssigneeID == u.ID)
+}
+
+// canManageOrder limits structural changes (assignment and task list) to
+// admins and the creator. Being assigned to an order only allows working on
+// it, including ticking off tasks.
+func canManageOrder(u *model.User, o *model.Order) bool {
+	return u != nil && o != nil && (u.IsAdmin() || o.OwnerID == u.ID)
 }
 
 func (s *Server) timerData(r *http.Request, o *model.Order) (pageData, error) {
@@ -729,7 +736,10 @@ func (s *Server) setAssignee(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusNotFound, "Auftrag nicht gefunden")
 		return
 	}
-	user := auth.UserFrom(r)
+	if !canManageOrder(auth.UserFrom(r), o) {
+		s.fail(w, http.StatusForbidden, "Nur der Ersteller oder ein Admin darf die Zuordnung ändern")
+		return
+	}
 	assignee, _ := strconv.ParseInt(r.FormValue("assignee_id"), 10, 64)
 	if assignee != 0 {
 		active, err := s.store.IsActiveUser(assignee)
@@ -742,23 +752,7 @@ func (s *Server) setAssignee(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// An unassigned order may be claimed by any logged-in user. Editing an
-	// already assigned order remains limited to owner, assignee and admin.
-	claiming := !canEdit(user, o)
-	if claiming && (o.AssigneeID != 0 || assignee != user.ID) {
-		s.fail(w, http.StatusForbidden, "Keine Berechtigung")
-		return
-	}
-	if claiming {
-		if err := s.store.ClaimOrder(id, assignee); err != nil {
-			if errors.Is(err, store.ErrConflict) {
-				http.Redirect(w, r, fmt.Sprintf("/orders/%d?err=Auftrag+wurde+inzwischen+zugewiesen.", id), http.StatusSeeOther)
-				return
-			}
-			s.fail(w, http.StatusInternalServerError, "Zuordnung konnte nicht gespeichert werden")
-			return
-		}
-	} else if err := s.store.SetAssignee(id, assignee); err != nil {
+	if err := s.store.SetAssignee(id, assignee); err != nil {
 		s.fail(w, http.StatusInternalServerError, "Zuordnung konnte nicht gespeichert werden")
 		return
 	}
@@ -801,8 +795,8 @@ func (s *Server) addTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	o, err := s.store.Order(id)
-	if err != nil || o == nil || !canEdit(auth.UserFrom(r), o) {
-		s.fail(w, http.StatusForbidden, "Keine Berechtigung")
+	if err != nil || o == nil || !canManageOrder(auth.UserFrom(r), o) {
+		s.fail(w, http.StatusForbidden, "Nur der Ersteller oder ein Admin darf Aufgaben hinzufügen")
 		return
 	}
 	if o.Done() {
@@ -821,52 +815,60 @@ func (s *Server) addTask(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("/orders/%d?ok=Aufgabe+hinzugef%%C3%%BCgt.", id), http.StatusSeeOther)
 }
 
-func (s *Server) taskIDs(w http.ResponseWriter, r *http.Request) (int64, int64, bool) {
+func (s *Server) taskIDs(w http.ResponseWriter, r *http.Request) (int64, int64, *model.Order, bool) {
 	orderID, ok := pathID(r, "id")
 	if !ok {
 		s.fail(w, http.StatusBadRequest, "Ungültige Auftragsnummer")
-		return 0, 0, false
+		return 0, 0, nil, false
 	}
 	taskID, ok := pathID(r, "taskID")
 	if !ok {
 		s.fail(w, http.StatusBadRequest, "Ungültige Aufgabennummer")
-		return 0, 0, false
+		return 0, 0, nil, false
 	}
 	o, err := s.store.Order(orderID)
 	if err != nil || o == nil || !canEdit(auth.UserFrom(r), o) {
 		s.fail(w, http.StatusForbidden, "Keine Berechtigung")
-		return 0, 0, false
+		return 0, 0, nil, false
 	}
 	if o.Done() {
 		s.fail(w, http.StatusConflict, "Auftrag ist abgeschlossen. Erst wieder öffnen.")
-		return 0, 0, false
+		return 0, 0, nil, false
 	}
 	// The task must actually belong to this order; otherwise a user who may
 	// edit order A could change a task in order B through A's URL.
 	belongs, err := s.store.TaskInOrder(orderID, taskID)
 	if err != nil {
 		s.fail(w, http.StatusInternalServerError, "Aufgabe konnte nicht geprüft werden")
-		return 0, 0, false
+		return 0, 0, nil, false
 	}
 	if !belongs {
 		s.fail(w, http.StatusNotFound, "Aufgabe nicht gefunden")
-		return 0, 0, false
+		return 0, 0, nil, false
 	}
-	return orderID, taskID, true
+	return orderID, taskID, o, true
 }
 
 func (s *Server) updateTask(w http.ResponseWriter, r *http.Request) {
-	orderID, taskID, ok := s.taskIDs(w, r)
+	orderID, taskID, o, ok := s.taskIDs(w, r)
 	if !ok {
 		return
 	}
-	title := r.FormValue("title")
-	if title == "" {
-		http.Redirect(w, r, fmt.Sprintf("/orders/%d?err=Ung%%C3%%BCltige+Aufgabe.", orderID), http.StatusSeeOther)
-		return
-	}
 	done := r.FormValue("done") == "on"
-	if err := s.store.UpdateTask(orderID, taskID, title, done); err != nil {
+	var err error
+	if canManageOrder(auth.UserFrom(r), o) {
+		title := r.FormValue("title")
+		if title == "" {
+			http.Redirect(w, r, fmt.Sprintf("/orders/%d?err=Ung%%C3%%BCltige+Aufgabe.", orderID), http.StatusSeeOther)
+			return
+		}
+		err = s.store.UpdateTask(orderID, taskID, title, done)
+	} else {
+		// Assigned users may only tick off tasks; a manipulated title field is
+		// ignored so it cannot rename someone else's task.
+		err = s.store.SetTaskDone(orderID, taskID, done)
+	}
+	if err != nil {
 		s.fail(w, http.StatusInternalServerError, "Aufgabe konnte nicht gespeichert werden")
 		return
 	}
@@ -874,8 +876,12 @@ func (s *Server) updateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) deleteTask(w http.ResponseWriter, r *http.Request) {
-	orderID, taskID, ok := s.taskIDs(w, r)
+	orderID, taskID, o, ok := s.taskIDs(w, r)
 	if !ok {
+		return
+	}
+	if !canManageOrder(auth.UserFrom(r), o) {
+		s.fail(w, http.StatusForbidden, "Nur der Ersteller oder ein Admin darf Aufgaben löschen")
 		return
 	}
 	if err := s.store.DeleteTask(orderID, taskID); err != nil {
