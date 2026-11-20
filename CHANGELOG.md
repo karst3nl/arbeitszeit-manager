@@ -17,6 +17,8 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - Aufträge werden beim Anlegen direkt einem aktiven Nutzer zugewiesen; neue Aufgaben können im Dropdown des Anlegeformulars als Vorlage angelegt werden
 - AW-Faktor im Adminbereich einstellbar (Minuten pro AW, Standard 6); bestehende Soll-Minuten bleiben erhalten, neue AW-Eingaben und alle AW-Anzeigen nutzen den gespeicherten Faktor
 - Zeitverlauf mit Zeitstempeln für Übergabe, Start, Pausen inklusive Dauer und Ende in Auftrag, Auswertung und CSV; bestehende Daten werden aus den bisherigen Zeitsegmenten nachgezogen
+- Aufgabenauswahl als eigene, dauerhaft sichtbare Karte neben dem Auftragsformular (statt Dropdown)
+- Dashboard-Aktualisierung per Server-Sent Events: Statuswechsel anderer Nutzer erscheinen sofort, der 30-Sekunden-Poll bleibt als Fallback
 
 ### Geändert
 - Normale Nutzer können keine Auftragszuordnung mehr ändern (auch nicht die Selbstzuordnung freier Aufträge) und keine Aufgaben anlegen, umbenennen oder löschen; zugewiesene Aufgaben dürfen nur noch abgehakt werden
@@ -24,6 +26,7 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - Große Seitenüberschriften entfernt; Auftrags- und Auswertungstitel bleiben als kompakte Zeile, Navigation und angemeldeter Nutzer stehen in der oberen Leiste
 
 ### Behoben
+- Admin-Startseite zeigte einen von einem Nutzer abgeschlossenen Auftrag erst nach dem nächsten 30-Sekunden-Refresh; jetzt sofort
 - Neue Aufgaben im Auftragsformular werden per HTMX eingefügt, ohne die Seite neu zu laden; bereits eingegebene Auftragsdaten und ausgewählte Aufgaben bleiben erhalten
 - Live-Ist-Zeit in Übersicht und Aufträgen während eines laufenden Timers
 - Auftragstitel in gespeicherter Auswertung und CSV-Export

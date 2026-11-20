@@ -11,16 +11,16 @@ Schlanke Webapp für Arbeitsaufträge mit geplanten Zeiten, einem Timer für die
 - **Arbeitsaufträge** mit Titel aus Kundenname und Kennzeichen, Beschreibung und beliebigen Aufgaben ohne einzelne Zeitangaben
 - **Soll-Zeit** wird vom Ersteller beim Anlegen in AW gesetzt; Nachkommastellen sind erlaubt. Der Faktor (Minuten pro AW, Standard 6 = 10 AW pro Stunde) ist im Adminbereich einstellbar. Anzeige und Auswertung zeigen AW zusätzlich zu Stunden/Minuten
 - **Zuweisung beim Anlegen**: der Auftrag wird direkt einem aktiven Nutzer zugeordnet
-- **Aufgaben-Vorlagen**: Admins pflegen die Liste im Adminbereich oder legen neue Aufgaben direkt im Dropdown des Anlegeformulars an; mehrere Vorlagen werden per Mehrfachauswahl in den Auftrag kopiert
+- **Aufgaben-Vorlagen**: Admins pflegen die Liste im Adminbereich oder legen neue Aufgaben direkt in der Aufgabenkarte neben dem Anlegeformular an; mehrere Vorlagen werden per Mehrfachauswahl in den Auftrag kopiert
 - **Ein Timer pro Auftrag**: Start → Pause → Weiter → Ende, beliebig viele Pausen
 - **Zeitverlauf**: Zeitstempel für Übergabe an den Mitarbeiter, jeden Start, jede Pause inklusive Dauer und das Ende; sichtbar im Auftrag, in der Auswertung und im CSV-Export
 - **Live-Anzeige** der Ist-Zeit mit sekündlichem Browser-Tick und 30-Sekunden-Server-Sync
 - **Auswertung** nach Abschluss: Soll, Ist und Abweichung in AW und Stunden/Minuten sowie in Prozent, Balkenvergleich, Notiz und CSV-Export
 - **Mehrnutzerfähig** (mind. 6): Login, Rollen `admin` / `user`, Sessions, CSRF-Schutz; Nutzer können das eigene Passwort ändern, Admins können Passwörter zurücksetzen
 - **Klar getrennte Rechte**: nur Admins und der Ersteller vergeben Aufträge und pflegen die Aufgabenliste; zugewiesene Nutzer können Aufgaben abhaken, aber keine Zuordnung ändern und keine Aufgaben anlegen, umbenennen oder löschen
-- **Rollenbasierte Startseite**: Admins sehen rechts die anderen Nutzer mit ihren zugeteilten Aufträgen sowie eine Rubrik „Nicht zugeteilt“ und links das Formular zum Anlegen neuer Aufträge; normale Nutzer sehen nur die ihnen zugewiesenen Aufträge
-- **Zählerleiste**: Offen / Läuft / Abgeschlossen mit anklickbaren Zählern zum Filtern; Zähler und Liste aktualisieren sich automatisch alle 30 Sekunden
-- **Pflege**: Aufträge löschen (nicht bei laufendem Timer), Übersicht aktualisiert sich automatisch alle 30 Sekunden
+- **Rollenbasierte Startseite**: Admins sehen die anderen Nutzer mit ihren zugeteilten Aufträgen sowie eine Rubrik „Nicht zugeteilt“; das Formular zum Anlegen neuer Aufträge steht oben links, die Aufgabenauswahl direkt daneben. Normale Nutzer sehen nur die ihnen zugewiesenen Aufträge
+- **Zählerleiste**: Offen / Läuft / Abgeschlossen mit anklickbaren Zählern zum Filtern; Zähler und Liste aktualisieren sich sofort bei Änderungen anderer Nutzer (Server-Sent Events) und zusätzlich alle 30 Sekunden
+- **Pflege**: Aufträge löschen (nicht bei laufendem Timer), Übersicht bleibt dadurch aktuell
 - **Robust**: SQLite im WAL-Modus, Backup-Skript, Reboot-Recovery für hängende Timer
 - **Responsiv**: Oberfläche im Stil der Home-Assistant-Finance-App mit oberer Navigation und Karten; auf Smartphones scrollbare Reiter und Karten statt Tabellen – ohne separate App oder Umschalter
 - **Offline-fähig**: keine CDNs, keine externen Dienste, alle Assets liegen im Repo

@@ -77,4 +77,33 @@
 
   tick();
   setInterval(tick, 1000);
+
+  // The dashboard listens for order changes from other users and reloads its
+  // order view immediately. The 30-second HTMX poll remains as a fallback.
+  var refreshTimer = null;
+  function refreshOrders() {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(function () {
+      refreshTimer = null;
+      var view = document.getElementById('orders-view');
+      if (!view || typeof htmx === 'undefined') return;
+      htmx.ajax('GET', view.getAttribute('hx-get') || '/orders', {
+        target: '#orders-view',
+        swap: 'innerHTML'
+      });
+    }, 120);
+  }
+
+  function watchOrders() {
+    if (!document.getElementById('orders-view') || typeof EventSource === 'undefined') return;
+    var stream = new EventSource('/events');
+    stream.addEventListener('orders', refreshOrders);
+    // EventSource reconnects automatically after a network interruption.
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', watchOrders);
+  } else {
+    watchOrders();
+  }
 })();

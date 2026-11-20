@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"bufio"
 	"io"
 	"log"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/karst3nl/arbeitszeit-manager/internal/api"
 	"github.com/karst3nl/arbeitszeit-manager/internal/auth"
@@ -410,6 +412,18 @@ func TestAdminTaskTemplatesAndOrderCreation(t *testing.T) {
 		!strings.Contains(body, `name="template_id" value="2"`) {
 		t.Fatalf("templates missing in multi-select: %s", body)
 	}
+	for _, want := range []string{
+		`class="create-grid"`,
+		`class="card task-picker"`,
+		`form="new-order-form" name="template_id"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("task picker is not beside the create form (%q): %s", want, body)
+		}
+	}
+	if strings.Contains(body, `<details class="template-picker">`) {
+		t.Fatal("task selection is still a dropdown")
+	}
 
 	// The creator sets the Soll; templates only supply task names.
 	body = post(t, client, base+"/orders", url.Values{
@@ -663,6 +677,72 @@ func TestUserCannotManageAssignmentOrTasks(t *testing.T) {
 	}
 	if strings.Contains(body, `action="/orders/1/assignee"`) || strings.Contains(body, `action="/orders/1/tasks"`) {
 		t.Fatalf("management forms shown to normal user: %s", body)
+	}
+}
+
+func TestUserCompletionUpdatesAdminDashboardImmediately(t *testing.T) {
+	ts, admin, adminCSRF := setup(t)
+	base := ts.URL
+
+	post(t, admin, base+"/orders", url.Values{
+		"csrf": {adminCSRF}, "customer": {"Sofort"}, "plate": {"M-SO 1"},
+		"aw": {"10"}, "assignee_id": {"1"},
+	})
+	post(t, admin, base+"/orders/1/assignee", url.Values{"csrf": {adminCSRF}, "assignee_id": {"2"}})
+
+	// The admin keeps the dashboard open in another browser session.
+	stream, err := admin.Get(base + "/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stream.Body.Close()
+	if stream.StatusCode != http.StatusOK {
+		t.Fatalf("event stream: %d", stream.StatusCode)
+	}
+	if got := stream.Header.Get("Content-Type"); !strings.HasPrefix(got, "text/event-stream") {
+		t.Fatalf("event stream content type: %q", got)
+	}
+	reader := bufio.NewReader(stream.Body)
+	if line, err := reader.ReadString('\n'); err != nil || !strings.HasPrefix(line, ":") {
+		t.Fatalf("event stream greeting: %q, %v", line, err)
+	}
+	if _, err := reader.ReadString('\n'); err != nil { // blank line after the greeting
+		t.Fatal(err)
+	}
+
+	events := make(chan string, 1)
+	go func() {
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				return
+			}
+			if strings.HasPrefix(line, "event: ") {
+				events <- strings.TrimSpace(line)
+				return
+			}
+		}
+	}()
+
+	mia, miaCSRF := loginAs(t, base, "mia")
+	post(t, mia, base+"/orders/1/timer/start", url.Values{"csrf": {miaCSRF}})
+	post(t, mia, base+"/orders/1/timer/stop", url.Values{"csrf": {miaCSRF}})
+
+	select {
+	case event := <-events:
+		if event != "event: orders" {
+			t.Fatalf("unexpected event: %q", event)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("dashboard did not receive an order change")
+	}
+
+	dashboard := get(t, admin, base+"/")
+	if !strings.Contains(dashboard, `data-count="done" data-value="1"`) {
+		t.Fatalf("admin dashboard done counter missing: %s", dashboard)
+	}
+	if !strings.Contains(dashboard, "Sofort · M-SO 1") || !strings.Contains(dashboard, "abgeschlossen") {
+		t.Fatalf("completed order missing on admin dashboard: %s", dashboard)
 	}
 }
 

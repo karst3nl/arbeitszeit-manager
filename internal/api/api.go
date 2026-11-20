@@ -28,6 +28,7 @@ type Server struct {
 	store     *store.Store
 	auth      *auth.Auth
 	templates *template.Template
+	events    *eventHub
 	version   string
 	logger    *log.Logger
 }
@@ -123,7 +124,7 @@ func New(s *store.Store, a *auth.Auth, version string, logger *log.Logger) (*Ser
 	if err != nil {
 		return nil, err
 	}
-	return &Server{store: s, auth: a, templates: t, version: version, logger: logger}, nil
+	return &Server{store: s, auth: a, templates: t, events: newEventHub(), version: version, logger: logger}, nil
 }
 
 // Handler returns the fully wrapped HTTP handler.
@@ -154,6 +155,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /account/password", s.auth.Require(http.HandlerFunc(s.changePassword)))
 	mux.Handle("POST /account/display-name", s.auth.Require(http.HandlerFunc(s.changeDisplayName)))
 	mux.Handle("GET /orders", s.auth.Require(http.HandlerFunc(s.orderList)))
+	mux.Handle("GET /events", s.auth.Require(http.HandlerFunc(s.orderEvents)))
 	mux.Handle("POST /orders", s.auth.Require(http.HandlerFunc(s.createOrder)))
 	mux.Handle("GET /orders/{id}", s.auth.Require(http.HandlerFunc(s.orderPage)))
 	mux.Handle("POST /orders/{id}/assignee", s.auth.Require(http.HandlerFunc(s.setAssignee)))
@@ -616,6 +618,7 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusInternalServerError, "Auftrag konnte nicht erstellt werden")
 		return
 	}
+	s.ordersChanged()
 	http.Redirect(w, r, fmt.Sprintf("/orders/%d?ok=Auftrag+erstellt.", id), http.StatusSeeOther)
 }
 
@@ -722,6 +725,7 @@ func (s *Server) timerAction(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusInternalServerError, "Timer konnte nicht geladen werden")
 		return
 	}
+	s.ordersChanged()
 	s.render(w, "timer", data)
 }
 
@@ -756,6 +760,7 @@ func (s *Server) setAssignee(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusInternalServerError, "Zuordnung konnte nicht gespeichert werden")
 		return
 	}
+	s.ordersChanged()
 	http.Redirect(w, r, fmt.Sprintf("/orders/%d?ok=Zuordnung+gespeichert.", id), http.StatusSeeOther)
 }
 
@@ -783,6 +788,7 @@ func (s *Server) deleteOrder(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusInternalServerError, "Auftrag konnte nicht gelöscht werden")
 		return
 	}
+	s.ordersChanged()
 	http.Redirect(w, r, "/?ok=Auftrag+gel%C3%B6scht.", http.StatusSeeOther)
 }
 
@@ -812,6 +818,7 @@ func (s *Server) addTask(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusInternalServerError, "Aufgabe konnte nicht gespeichert werden")
 		return
 	}
+	s.ordersChanged()
 	http.Redirect(w, r, fmt.Sprintf("/orders/%d?ok=Aufgabe+hinzugef%%C3%%BCgt.", id), http.StatusSeeOther)
 }
 
@@ -872,6 +879,7 @@ func (s *Server) updateTask(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusInternalServerError, "Aufgabe konnte nicht gespeichert werden")
 		return
 	}
+	s.ordersChanged()
 	http.Redirect(w, r, fmt.Sprintf("/orders/%d", orderID), http.StatusSeeOther)
 }
 
@@ -888,6 +896,7 @@ func (s *Server) deleteTask(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusInternalServerError, "Aufgabe konnte nicht gelöscht werden")
 		return
 	}
+	s.ordersChanged()
 	http.Redirect(w, r, fmt.Sprintf("/orders/%d", orderID), http.StatusSeeOther)
 }
 
@@ -908,6 +917,7 @@ func (s *Server) saveNotes(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusInternalServerError, "Notiz konnte nicht gespeichert werden")
 		return
 	}
+	s.ordersChanged()
 	http.Redirect(w, r, fmt.Sprintf("/orders/%d/report?ok=Notiz+gespeichert.", id), http.StatusSeeOther)
 }
 

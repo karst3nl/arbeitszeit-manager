@@ -194,10 +194,11 @@ normal, dann wird nur die Zielseite nicht mitgeladen.
 
 1. <http://127.0.0.1:8080/login> öffnen
 2. Anmelden mit `admin` / `testpass123`
-3. Unter **Nutzer & Vorlagen** den AW-Faktor ändern und eine Aufgaben-Vorlage anlegen (auch umbenennen/löschen testen), dann einen Auftrag mit Soll in AW, gewähltem Nutzer und optional mehreren Vorlagen aus dem Dropdown anlegen; neue Aufgaben lassen sich direkt im Dropdown anlegen → Timer Start/Pause/Weiter/Ende
+3. Unter **Nutzer & Vorlagen** den AW-Faktor ändern und eine Aufgaben-Vorlage anlegen (auch umbenennen/löschen testen), dann einen Auftrag mit Soll in AW, gewähltem Nutzer und optional mehreren Vorlagen aus der Aufgabenkarte neben dem Formular anlegen; neue Aufgaben lassen sich direkt dort anlegen, ohne die Eingaben zu verlieren → Timer Start/Pause/Weiter/Ende
 4. Im Auftrag und in „Auswertung ansehen" den **Zeitverlauf** mit Übergabe, Starts, Pausendauer und Ende prüfen; den CSV-Export ebenfalls prüfen
 5. Mit einem normalen Nutzer anmelden: Die **Zuordnung** ist nur lesbar, es gibt kein Formular zum Anlegen/Bearbeiten/Löschen von Aufgaben; Aufgaben lassen sich nur abhaken
-6. Oben rechts **Konto** (Passwort ändern) und **Nutzer** ( Admin-Seite) testen
+6. Admin-Startseite und Nutzer-Ansicht gleichzeitig offen halten: Wenn der Nutzer einen Auftrag mit **⏹ Ende** abschließt, springt der Zähler „Abgeschlossen“ beim Admin sofort hoch (ohne 30 Sekunden zu warten)
+7. Oben rechts **Konto** (Passwort ändern) und **Nutzer** ( Admin-Seite) testen
 
 ---
 
