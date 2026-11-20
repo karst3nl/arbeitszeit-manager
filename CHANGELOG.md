@@ -6,6 +6,7 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ## [Unreleased]
 
 ### Hinzugefügt
+- Desktop-Layout: breitere Ansicht und zweispaltige Seiten ab 1100 px; Smartphone-Layout bleibt unverändert
 - Soll-Zeit direkt beim Anlegen eines Auftrags; `0` übernimmt weiterhin die Summe der Aufgaben und lässt sich im Auftrag später ändern
 
 ### Behoben

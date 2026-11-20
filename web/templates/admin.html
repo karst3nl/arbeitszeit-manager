@@ -3,64 +3,70 @@
 <h1>Nutzer verwalten</h1>
 <p class="muted">Für dieses Team ausgelegt: beliebig viele Konten, mindestens sechs vorgesehen.</p>
 
-<article>
-  <h2>Neuer Nutzer</h2>
-  <form method="post" action="/admin/users">
-    {{template "csrf" .}}
-    <div class="grid">
-      <label>Benutzername
-        <input name="username" required maxlength="80" autocomplete="off">
-      </label>
-      <label>Anzeigename
-        <input name="display_name" maxlength="120" placeholder="optional">
-      </label>
-      <label>Passwort
-        <input type="password" name="password" required minlength="8">
-      </label>
-      <label>Rolle
-        <select name="role">
-          <option value="user">Nutzer</option>
-          <option value="admin">Administrator</option>
-        </select>
-      </label>
-    </div>
-    <button type="submit">Nutzer anlegen</button>
-  </form>
-</article>
+<div class="page-columns side-first">
+  <aside class="col-side">
+    <article>
+      <h2>Neuer Nutzer</h2>
+      <form method="post" action="/admin/users">
+        {{template "csrf" .}}
+        <div class="grid">
+          <label>Benutzername
+            <input name="username" required maxlength="80" autocomplete="off">
+          </label>
+          <label>Anzeigename
+            <input name="display_name" maxlength="120" placeholder="optional">
+          </label>
+          <label>Passwort
+            <input type="password" name="password" required minlength="8">
+          </label>
+          <label>Rolle
+            <select name="role">
+              <option value="user">Nutzer</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </label>
+        </div>
+        <button type="submit">Nutzer anlegen</button>
+      </form>
+    </article>
+  </aside>
 
-<article>
-  <h2>Bestehende Nutzer</h2>
-  <table>
-    <thead><tr><th>Benutzername</th><th>Anzeigename</th><th>Rolle</th><th>Status</th><th></th></tr></thead>
-    <tbody>
-      {{range .Users}}
-        <tr>
-          <td>{{.Username}}</td>
-          <td>{{.DisplayName}}</td>
-          <td>{{if .IsAdmin}}Admin{{else}}Nutzer{{end}}</td>
-          <td>{{if .Active}}aktiv{{else}}deaktiviert{{end}}</td>
-          <td>
-            {{if ne .ID $.User.ID}}
-              <form method="post" action="/admin/users/{{.ID}}/active" class="inline">
-                {{template "csrf" $}}
-                <input type="hidden" name="active" value="{{if .Active}}0{{else}}1{{end}}">
-                <button type="submit" class="outline secondary">
-                  {{if .Active}}Deaktivieren{{else}}Aktivieren{{end}}
-                </button>
-              </form>
-              <details>
-                <summary>Passwort zurücksetzen</summary>
-                <form method="post" action="/admin/users/{{.ID}}/password">
-                  {{template "csrf" $}}
-                  <input type="password" name="password" minlength="8" placeholder="Neues Passwort" required>
-                  <button type="submit" class="secondary">Setzen</button>
-                </form>
-              </details>
-            {{end}}
-          </td>
-        </tr>
-      {{end}}
-    </tbody>
-  </table>
-</article>
+  <div class="col-main">
+    <article>
+      <h2>Bestehende Nutzer</h2>
+      <table>
+        <thead><tr><th>Benutzername</th><th>Anzeigename</th><th>Rolle</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {{range .Users}}
+            <tr>
+              <td>{{.Username}}</td>
+              <td>{{.DisplayName}}</td>
+              <td>{{if .IsAdmin}}Admin{{else}}Nutzer{{end}}</td>
+              <td>{{if .Active}}aktiv{{else}}deaktiviert{{end}}</td>
+              <td>
+                {{if ne .ID $.User.ID}}
+                  <form method="post" action="/admin/users/{{.ID}}/active" class="inline">
+                    {{template "csrf" $}}
+                    <input type="hidden" name="active" value="{{if .Active}}0{{else}}1{{end}}">
+                    <button type="submit" class="outline secondary">
+                      {{if .Active}}Deaktivieren{{else}}Aktivieren{{end}}
+                    </button>
+                  </form>
+                  <details>
+                    <summary>Passwort zurücksetzen</summary>
+                    <form method="post" action="/admin/users/{{.ID}}/password">
+                      {{template "csrf" $}}
+                      <input type="password" name="password" minlength="8" placeholder="Neues Passwort" required>
+                      <button type="submit" class="secondary">Setzen</button>
+                    </form>
+                  </details>
+                {{end}}
+              </td>
+            </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </article>
+  </div>
+</div>
 {{template "footer" .}}

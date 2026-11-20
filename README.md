@@ -15,6 +15,7 @@ Schlanke Webapp für Arbeitsaufträge mit geplanten Zeiten, einem Timer für die
 - **Mehrnutzerfähig** (mind. 6): Login, Rollen `admin` / `user`, Sessions, CSRF-Schutz; Nutzer können sich offene Aufträge selbst zuordnen, das eigene Passwort ändern und Admins können Passwörter zurücksetzen
 - **Pflege**: Aufträge löschen (nicht bei laufendem Timer), Übersicht aktualisiert sich automatisch alle 30 Sekunden
 - **Robust**: SQLite im WAL-Modus, Backup-Skript, Reboot-Recovery für hängende Timer
+- **Responsiv**: kompakte Ansicht fürs Smartphone, automatisch breiteres Zweispalten-Layout am Desktop – ohne separate App oder Umschalter
 - **Offline-fähig**: keine CDNs, keine externen Dienste, alle Assets liegen im Repo
 - **Schlank**: ein Binary, ~20 MB RAM für die App, kein Docker nötig
 

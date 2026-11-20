@@ -6,51 +6,55 @@
 <p><a class="button secondary" href="/orders/{{.Report.OrderID}}/report.csv">CSV herunterladen</a></p>
 <p class="muted">Abgeschlossen am {{date .Report.CreatedAt}}</p>
 
-<article>
-  <h2>Soll / Ist</h2>
-  <div class="figures big">
-    <div><span class="muted">Soll</span><strong>{{minutes .Report.PlannedMinutes}}</strong></div>
-    <div><span class="muted">Ist</span><strong>{{dur .Report.ActualSeconds}}</strong></div>
-    <div><span class="muted">Abweichung</span><strong>{{signed .Report.DeviationSeconds}}</strong></div>
-    <div><span class="muted">Prozent</span><strong>{{pct .Report.DeviationPercent}}</strong></div>
-  </div>
+<div class="page-columns">
+  <article class="col-main">
+    <h2>Soll / Ist</h2>
+    <div class="figures big">
+      <div><span class="muted">Soll</span><strong>{{minutes .Report.PlannedMinutes}}</strong></div>
+      <div><span class="muted">Ist</span><strong>{{dur .Report.ActualSeconds}}</strong></div>
+      <div><span class="muted">Abweichung</span><strong>{{signed .Report.DeviationSeconds}}</strong></div>
+      <div><span class="muted">Prozent</span><strong>{{pct .Report.DeviationPercent}}</strong></div>
+    </div>
 
-  <div class="bar-row">
-    <span>Soll</span>
-    <div class="bar-track"><div class="bar soll" style="width: {{.BarSoll}}%"></div></div>
-    <span>{{minutes .Report.PlannedMinutes}}</span>
-  </div>
-  <div class="bar-row">
-    <span>Ist</span>
-    <div class="bar-track"><div class="bar ist" style="width: {{.BarIst}}%"></div></div>
-    <span>{{dur .Report.ActualSeconds}}</span>
-  </div>
+    <div class="bar-row">
+      <span>Soll</span>
+      <div class="bar-track"><div class="bar soll" style="width: {{.BarSoll}}%"></div></div>
+      <span>{{minutes .Report.PlannedMinutes}}</span>
+    </div>
+    <div class="bar-row">
+      <span>Ist</span>
+      <div class="bar-track"><div class="bar ist" style="width: {{.BarIst}}%"></div></div>
+      <span>{{dur .Report.ActualSeconds}}</span>
+    </div>
 
-  <p><strong>{{.Report.Summary}}</strong></p>
-</article>
+    <p><strong>{{.Report.Summary}}</strong></p>
+  </article>
 
-<article>
-  <h2>Geplante Aufgaben</h2>
-  {{if .Report.Tasks}}
-    <table>
-      <thead><tr><th>Aufgabe</th><th>Geplant</th></tr></thead>
-      <tbody>
-        {{range .Report.Tasks}}
-          <tr><td>{{.Title}}</td><td>{{minutes .PlannedMinutes}}</td></tr>
-        {{end}}
-      </tbody>
-    </table>
-  {{else}}
-    <p class="muted">Keine Aufgaben erfasst.</p>
-  {{end}}
-</article>
+  <aside class="col-side">
+    <article>
+      <h2>Geplante Aufgaben</h2>
+      {{if .Report.Tasks}}
+        <table>
+          <thead><tr><th>Aufgabe</th><th>Geplant</th></tr></thead>
+          <tbody>
+            {{range .Report.Tasks}}
+              <tr><td>{{.Title}}</td><td>{{minutes .PlannedMinutes}}</td></tr>
+            {{end}}
+          </tbody>
+        </table>
+      {{else}}
+        <p class="muted">Keine Aufgaben erfasst.</p>
+      {{end}}
+    </article>
 
-<article>
-  <h2>Notiz</h2>
-  <form method="post" action="/orders/{{.Report.OrderID}}/notes">
-    {{template "csrf" .}}
-    <textarea name="notes" rows="4" maxlength="5000" placeholder="Was lief gut, was war unerwartet?">{{.Report.Notes}}</textarea>
-    <button type="submit" class="secondary">Notiz speichern</button>
-  </form>
-</article>
+    <article>
+      <h2>Notiz</h2>
+      <form method="post" action="/orders/{{.Report.OrderID}}/notes">
+        {{template "csrf" .}}
+        <textarea name="notes" rows="4" maxlength="5000" placeholder="Was lief gut, was war unerwartet?">{{.Report.Notes}}</textarea>
+        <button type="submit" class="secondary">Notiz speichern</button>
+      </form>
+    </article>
+  </aside>
+</div>
 {{template "footer" .}}

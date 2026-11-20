@@ -105,3 +105,59 @@ footer.container { padding-top: 1.5rem; border-top: 1px solid var(--pico-muted-b
   .timer-actions form { flex: 1 1 100%; }
   .timer-actions button, .timer-actions .button { width: 100%; }
 }
+
+/* Desktop: same pages, more room. Below this breakpoint nothing changes, so
+   the smartphone layout stays exactly as it is. */
+@media (min-width: 1100px) {
+  .container { max-width: 1360px; }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--pico-background-color);
+  }
+
+  .page-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 2rem;
+    align-items: start;
+  }
+  .page-columns.side-first { grid-template-columns: 320px minmax(0, 1fr); }
+  .page-columns.even { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .page-columns .col-side { position: sticky; top: 5rem; }
+  .page-columns article { margin-bottom: 0; }
+  .page-columns .col-side > * + * { margin-top: 1.5rem; }
+
+  .timer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .5rem 1.5rem;
+    align-items: center;
+  }
+  .timer > .error { grid-column: 1 / -1; grid-row: 1; }
+  .timer-main { grid-column: 1; grid-row: 2; }
+  .timer .figures { grid-column: 1; grid-row: 3; margin: 0; }
+  .timer-actions {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    justify-content: flex-end;
+    margin: 0;
+  }
+
+  .soll-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 1rem;
+  }
+  .soll-form button { margin: 0; white-space: nowrap; }
+
+  .task-form { grid-template-columns: auto minmax(220px, 1fr) 110px auto; }
+  .grid.cards { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .order-card { transition: transform .12s ease, box-shadow .12s ease; }
+  .order-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgb(0 0 0 / 8%); }
+
+  .prose { max-width: 800px; }
+}

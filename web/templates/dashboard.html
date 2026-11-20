@@ -2,28 +2,34 @@
 {{template "header" .}}
 <h1>Arbeitsaufträge</h1>
 
-<article>
-  <h2>Neuer Auftrag</h2>
-  <form method="post" action="/orders">
-    {{template "csrf" .}}
-    <div class="grid">
-      <label>Titel
-        <input name="title" required maxlength="200" placeholder="z. B. Kunde Muster – Relaunch">
-      </label>
-      <label>Beschreibung
-        <input name="description" maxlength="500" placeholder="kurz beschreiben">
-      </label>
-      <label>Soll-Zeit in Minuten
-        <input name="planned" type="number" min="0" max="60000" value="0" required>
-        <small class="muted">0 = Summe der Aufgaben als Soll verwenden</small>
-      </label>
-    </div>
-    <button type="submit">Auftrag erstellen</button>
-  </form>
-</article>
+<div class="page-columns side-first">
+  <aside class="col-side">
+    <article>
+      <h2>Neuer Auftrag</h2>
+      <form method="post" action="/orders">
+        {{template "csrf" .}}
+        <div class="grid">
+          <label>Titel
+            <input name="title" required maxlength="200" placeholder="z. B. Kunde Muster – Relaunch">
+          </label>
+          <label>Beschreibung
+            <input name="description" maxlength="500" placeholder="kurz beschreiben">
+          </label>
+          <label>Soll-Zeit in Minuten
+            <input name="planned" type="number" min="0" max="60000" value="0" required>
+            <small class="muted">0 = Summe der Aufgaben als Soll verwenden</small>
+          </label>
+        </div>
+        <button type="submit">Auftrag erstellen</button>
+      </form>
+    </article>
+  </aside>
 
-<h2>Übersicht <span class="muted">· aktualisiert automatisch</span></h2>
-<div id="order-list" hx-get="/orders" hx-trigger="every 30s" hx-swap="innerHTML">
-  {{template "order-list" .}}
+  <div class="col-main">
+    <h2>Übersicht <span class="muted">· aktualisiert automatisch</span></h2>
+    <div id="order-list" hx-get="/orders" hx-trigger="every 30s" hx-swap="innerHTML">
+      {{template "order-list" .}}
+    </div>
+  </div>
 </div>
 {{template "footer" .}}
