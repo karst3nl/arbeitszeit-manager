@@ -6,6 +6,7 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ## [Unreleased]
 
 ### Hinzugefügt
+- Admin-Startseite rechts nutzerzentriert: andere Nutzer mit ihren zugeteilten Aufträgen sowie eine Rubrik „Nicht zugeteilt“; Zählerleiste und Filter bleiben erhalten
 - Zählerleiste über der Auftragsliste für offene, laufende und abgeschlossene Aufträge; Klick filtert die Liste, Zähler bleiben vollständig und aktualisieren sich alle 30 Sekunden
 - Desktop-Oberfläche mit fester Seitenleiste und Statusleiste ab 1100 px; Navigation zeigt den aktiven Bereich
 - Startseite nach Rolle: Admins sehen alle offenen und in Bearbeitung befindlichen Aufträge plus Formular zum Anlegen; Nutzer nur die ihnen zugewiesenen Aufträge

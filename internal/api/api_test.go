@@ -220,11 +220,14 @@ func TestDashboardIsRoleSpecific(t *testing.T) {
 	post(t, client, base+"/orders/3/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"1"}})
 
 	body := get(t, client, base+"/")
-	for _, want := range []string{"Neuer Auftrag", "Offene Aufträge", "In Bearbeitung",
-		"Offener Auftrag", "Mia Auftrag", "Admin Auftrag"} {
+	for _, want := range []string{"Neuer Auftrag", "Nicht zugeteilt", "@mia", "Läuft",
+		"Offener Auftrag", "Mia Auftrag"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("admin dashboard missing %q", want)
 		}
+	}
+	if strings.Contains(body, "@admin") {
+		t.Fatal("admin dashboard lists the current admin as another user")
 	}
 
 	mia, _ := loginAs(t, base, "mia")

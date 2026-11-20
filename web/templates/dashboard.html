@@ -40,7 +40,7 @@
 
     <div class="col-main">
       <div id="orders-view" hx-get="/orders?filter={{.OrderFilter}}" hx-trigger="every 30s" hx-swap="innerHTML">
-        {{template "orders-view" .}}
+        {{template "admin-orders-view" .}}
       </div>
     </div>
   </div>

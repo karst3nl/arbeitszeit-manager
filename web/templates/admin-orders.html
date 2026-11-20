@@ -1,0 +1,29 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+{{define "admin-orders-view"}}
+  {{template "order-summary" .}}
+  {{template "admin-user-list" .}}
+{{end}}
+
+{{define "admin-user-list"}}
+  {{if .Unassigned}}
+    <section class="order-group">
+      <h2>Nicht zugeteilt <span class="count">{{len .Unassigned}}</span></h2>
+      <p class="muted">Noch keinem Nutzer zugewiesen.</p>
+      {{template "order-cards" .Unassigned}}
+    </section>
+  {{end}}
+
+  {{range .UserOrders}}
+    <section class="order-group user-orders">
+      <h2>{{.User.DisplayName}} <span class="muted">@{{.User.Username}}</span></h2>
+      <p class="muted user-counts">
+        Offen <strong>{{.CountOpen}}</strong> ·
+        Läuft <strong>{{.CountActive}}</strong> ·
+        Abgeschlossen <strong>{{.CountDone}}</strong>
+      </p>
+      {{template "order-cards" .Orders}}
+    </section>
+  {{else}}
+    <p class="muted">Noch keine weiteren Nutzer angelegt.</p>
+  {{end}}
+{{end}}

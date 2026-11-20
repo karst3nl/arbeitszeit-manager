@@ -31,6 +31,16 @@ type Server struct {
 	logger    *log.Logger
 }
 
+// userOrders is one card on the admin dashboard: a user together with the
+// orders assigned to them and their status counts.
+type userOrders struct {
+	User        model.User
+	Orders      []model.Order
+	CountOpen   int
+	CountActive int
+	CountDone   int
+}
+
 type pageData struct {
 	Title   string
 	Nav     string
@@ -45,6 +55,8 @@ type pageData struct {
 	ActiveOrders  []model.Order
 	DoneOrders    []model.Order
 	OrderFilter   string
+	UserOrders    []userOrders
+	Unassigned    []model.Order
 	CountAll      int
 	CountOpen     int
 	CountActive   int
@@ -333,10 +345,10 @@ func (s *Server) orderGroups(r *http.Request, data *pageData) error {
 		if u == nil || (!u.IsAdmin() && o.AssigneeID != u.ID) {
 			continue
 		}
-		switch {
-		case o.Done():
+		switch orderState(o) {
+		case "done":
 			data.DoneOrders = append(data.DoneOrders, o)
-		case o.TimerState == "running" || o.TimerState == "paused":
+		case "active":
 			data.ActiveOrders = append(data.ActiveOrders, o)
 		default:
 			data.OpenOrders = append(data.OpenOrders, o)
@@ -370,6 +382,81 @@ func orderFilter(r *http.Request) string {
 	}
 }
 
+// orderState maps an order to one of the three summary counters.
+func orderState(o model.Order) string {
+	switch {
+	case o.Done():
+		return "done"
+	case o.TimerState == "running" || o.TimerState == "paused":
+		return "active"
+	default:
+		return "open"
+	}
+}
+
+// adminOrders builds the user-centric dashboard data: every other user with
+// their assigned orders, plus a section for orders nobody has claimed yet.
+// The counters always cover all orders, even when a filter is active.
+func (s *Server) adminOrders(r *http.Request, data *pageData) error {
+	users, err := s.store.Users()
+	if err != nil {
+		return err
+	}
+	orders, err := s.store.Orders()
+	if err != nil {
+		return err
+	}
+
+	for _, o := range orders {
+		switch orderState(o) {
+		case "open":
+			data.CountOpen++
+		case "active":
+			data.CountActive++
+		case "done":
+			data.CountDone++
+		}
+	}
+	data.CountAll = data.CountOpen + data.CountActive + data.CountDone
+
+	current := auth.UserFrom(r)
+	for _, u := range users {
+		if u.ID == current.ID {
+			continue
+		}
+		entry := userOrders{User: u}
+		for _, o := range orders {
+			if o.AssigneeID != u.ID {
+				continue
+			}
+			state := orderState(o)
+			switch state {
+			case "open":
+				entry.CountOpen++
+			case "active":
+				entry.CountActive++
+			case "done":
+				entry.CountDone++
+			}
+			if data.OrderFilter == "" || data.OrderFilter == state {
+				entry.Orders = append(entry.Orders, o)
+			}
+		}
+		data.UserOrders = append(data.UserOrders, entry)
+	}
+
+	for _, o := range orders {
+		if o.AssigneeID != 0 {
+			continue
+		}
+		state := orderState(o)
+		if data.OrderFilter == "" || data.OrderFilter == state {
+			data.Unassigned = append(data.Unassigned, o)
+		}
+	}
+	return nil
+}
+
 func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		s.fail(w, http.StatusNotFound, "Nicht gefunden")
@@ -386,23 +473,37 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 		}
 		data.TaskTemplates = templates
 	}
-	if err := s.orderGroups(r, &data); err != nil {
+	var err error
+	if auth.UserFrom(r).IsAdmin() {
+		err = s.adminOrders(r, &data)
+	} else {
+		err = s.orderGroups(r, &data)
+	}
+	if err != nil {
 		s.fail(w, http.StatusInternalServerError, "Aufträge konnten nicht geladen werden")
 		return
 	}
 	s.render(w, "dashboard.html", data)
 }
 
-// orderList renders the summary bar and the cards so HTMX can refresh both
-// every 30 seconds without touching the create form.
+// orderList renders the summary bar and the role-specific order overview so
+// HTMX can refresh both every 30 seconds without touching the create form.
 func (s *Server) orderList(w http.ResponseWriter, r *http.Request) {
 	data := s.base(r)
 	data.OrderFilter = orderFilter(r)
-	if err := s.orderGroups(r, &data); err != nil {
+	view := "orders-view"
+	var err error
+	if auth.UserFrom(r).IsAdmin() {
+		err = s.adminOrders(r, &data)
+		view = "admin-orders-view"
+	} else {
+		err = s.orderGroups(r, &data)
+	}
+	if err != nil {
 		s.fail(w, http.StatusInternalServerError, "Aufträge konnten nicht geladen werden")
 		return
 	}
-	s.render(w, "orders-view", data)
+	s.render(w, view, data)
 }
 
 func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
