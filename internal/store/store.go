@@ -45,6 +45,21 @@ type queryer interface {
 	QueryRow(query string, args ...any) *sql.Row
 }
 
+// sqliteDSN builds a file URI with the per-connection pragmas. OmitHost is
+// essential: without it net/url turns "./data/app.db" into "file://./data/…",
+// whose authority "." SQLite rejects as an invalid URI.
+func sqliteDSN(path string) string {
+	if path == ":memory:" || strings.HasPrefix(path, "file:") {
+		return path
+	}
+	return (&url.URL{
+		Scheme:   "file",
+		OmitHost: true,
+		Path:     path,
+		RawQuery: "_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)",
+	}).String()
+}
+
 // Open opens the database, applies pragmas and runs pending migrations.
 func Open(path string) (*Store, error) {
 	if dir := filepath.Dir(path); dir != "." && dir != "/" {
@@ -58,15 +73,7 @@ func Open(path string) (*Store, error) {
 	// after a driver error. journal_mode and synchronous are persistent.
 	// In-memory databases use the plain SQLite name; the pragmas are then
 	// applied below instead.
-	dsn := path
-	if path != ":memory:" && !strings.HasPrefix(path, "file:") {
-		dsn = (&url.URL{
-			Scheme:   "file",
-			Path:     path,
-			RawQuery: "_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)",
-		}).String()
-	}
-	db, err := sql.Open("sqlite", dsn)
+	db, err := sql.Open("sqlite", sqliteDSN(path))
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}

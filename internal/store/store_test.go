@@ -4,6 +4,7 @@ package store
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -308,6 +309,39 @@ func TestInterruptedFlagClearsAfterResume(t *testing.T) {
 	o, err = s.Order(id)
 	if err != nil || o.Interrupted {
 		t.Fatalf("flag should be cleared after resume: %+v, %v", o, err)
+	}
+}
+
+func TestSQLiteDSNKeepsRelativePathsValid(t *testing.T) {
+	want := "file:./data/app.db?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)"
+	if got := sqliteDSN("./data/app.db"); got != want {
+		t.Fatalf("relative DSN: got %q, want %q", got, want)
+	}
+	if got := sqliteDSN("data/app.db"); got != "file:data/app.db?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)" {
+		t.Fatalf("relative DSN without dot: %q", got)
+	}
+	if got := sqliteDSN(":memory:"); got != ":memory:" {
+		t.Fatalf("memory DSN: %q", got)
+	}
+}
+
+func TestOpenRelativeDatabasePath(t *testing.T) {
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chdir(old) })
+
+	s, err := Open("./data/app.db")
+	if err != nil {
+		t.Fatalf("open relative database: %v", err)
+	}
+	defer s.Close()
+	if _, err := os.Stat("data/app.db"); err != nil {
+		t.Fatalf("database file missing: %v", err)
 	}
 }
 

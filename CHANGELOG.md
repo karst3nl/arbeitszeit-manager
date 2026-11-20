@@ -19,6 +19,7 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - `Cache-Control: no-store` für dynamische Seiten, `foreign_keys` und `busy_timeout` DSN-basiert
 - "Timer korrigiert" verschwindet nach Weiter/Ende; CI läuft auch auf `master`; Update-Skript prüft SHA-256-Prüfsummen
 - CLI-Unterbefehle funktionieren auch nach globalen Flags (`-db … admin create-user`)
+- Relative Datenbankpfade wie `./data/app.db` funktionieren wieder (SQLite-URI ohne Authority)
 
 ### Geplant
 - Wiederkehrende Aufträge / Vorlagen
