@@ -1,0 +1,52 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+{{define "header"}}<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · Arbeitszeit-Manager</title>
+  <link rel="stylesheet" href="/static/vendor/pico.min.css">
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/vendor/htmx.min.js" defer></script>
+  <script src="/static/vendor/alpine.min.js" defer></script>
+  <script src="/static/tick.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <nav class="container">
+      <ul>
+        <li><strong><a href="/">⏱ Arbeitszeit</a></strong></li>
+      </ul>
+      <ul>
+        {{if .User}}
+          <li><a href="/account">Konto</a></li>
+          <li><a href="/about">Über</a></li>
+          {{if .User.IsAdmin}}<li><a href="/admin">Nutzer</a></li>{{end}}
+          <li class="muted">{{.User.DisplayName}}</li>
+          <li>
+            <form method="post" action="/logout" class="inline">
+              {{template "csrf" .}}
+              <button type="submit" class="outline secondary">Abmelden</button>
+            </form>
+          </li>
+        {{end}}
+      </ul>
+    </nav>
+  </header>
+  <main class="container">
+    {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+{{end}}
+
+{{define "footer"}}
+  </main>
+  <footer class="container muted">
+    <a href="/about">Arbeitszeit-Manager</a> · Freie Software unter AGPL-3.0 ·
+    <a href="https://github.com/karst3nl/arbeitszeit-manager">Quelltext</a>
+    {{if .Version}} · v{{.Version}}{{end}}
+  </footer>
+</body>
+</html>
+{{end}}
+
+{{define "csrf"}}<input type="hidden" name="csrf" value="{{.CSRF}}">{{end}}

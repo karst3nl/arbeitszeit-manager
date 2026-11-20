@@ -1,0 +1,24 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+{{template "header" .}}
+<h1>Über diese Anwendung</h1>
+
+<article>
+  <hgroup>
+    <h2>Arbeitszeit-Manager</h2>
+    <p>Version {{if .Version}}{{.Version}}{{else}}dev{{end}}</p>
+  </hgroup>
+  <p>
+    Arbeitsaufträge anlegen, die tatsächliche Arbeitszeit mit einem Timer erfassen
+    und Soll und Ist nach Abschluss vergleichen. Läuft komplett lokal im Netzwerk,
+    ohne externe Dienste und ohne Internetverbindung.
+  </p>
+  <p>
+    Diese Anwendung ist <strong>Freie Software</strong> und steht unter der
+    <strong>GNU Affero General Public License Version 3</strong> (AGPL-3.0-only).
+    Wenn du sie über ein Netzwerk bereitstellst, hast du das Recht, den Quelltext
+    zu erhalten. Er ist vollständig verfügbar unter:
+  </p>
+  <p><a href="https://github.com/karst3nl/arbeitszeit-manager">https://github.com/karst3nl/arbeitszeit-manager</a></p>
+  <p class="muted">Eine Kopie der Lizenz liegt im Repository in der Datei LICENSE.</p>
+</article>
+{{template "footer" .}}

@@ -1,0 +1,17 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+{{template "header" .}}
+<article class="login-card">
+  <hgroup>
+    <h1>Anmelden</h1>
+    <p>Arbeitszeit-Manager · nur im lokalen Netzwerk erreichbar</p>
+  </hgroup>
+  <form method="post" action="/login">
+    {{template "csrf" .}}
+    <label for="username">Benutzername</label>
+    <input id="username" name="username" required autofocus autocomplete="username" maxlength="80">
+    <label for="password">Passwort</label>
+    <input id="password" type="password" name="password" required autocomplete="current-password">
+    <button type="submit">Anmelden</button>
+  </form>
+</article>
+{{template "footer" .}}

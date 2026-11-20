@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Optional: HTTPS with a self-signed certificate in front of the Go server.
+# For a pure LAN setup you can skip Nginx entirely and use port 8080 directly.
+
+server {
+    listen 80;
+    server_name pi.local;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name pi.local;
+
+    ssl_certificate     /etc/ssl/certs/ssl-cert-snakeoil.pem;
+    ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
+
+    # Self-signed: browsers will show a warning once on first visit.
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+
+    client_max_body_size 2m;
+
+    location / {
+        proxy_pass         http://127.0.0.1:8080;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+}
+
+# When using Nginx, change the service ExecStart to:
+#   -addr 127.0.0.1:8080
+# and start the app with -secure-cookie so login cookies are marked Secure.

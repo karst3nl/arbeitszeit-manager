@@ -1,0 +1,25 @@
+[Unit]
+Description=Arbeitszeit-Manager
+Documentation=https://github.com/karst3nl/arbeitszeit-manager
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=arbeitszeit
+Group=arbeitszeit
+Environment=DB_PATH=/var/lib/arbeitszeit-manager/app.db
+# Go honours TZ for all displayed timestamps. Adjust to your location.
+Environment=TZ=Europe/Berlin
+ExecStart=/opt/arbeitszeit-manager/arbeitszeit-manager -addr :8080 -db /var/lib/arbeitszeit-manager/app.db
+Restart=always
+RestartSec=2
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/arbeitszeit-manager
+
+[Install]
+WantedBy=multi-user.target

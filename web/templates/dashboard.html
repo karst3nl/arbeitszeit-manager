@@ -1,0 +1,25 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+{{template "header" .}}
+<h1>Arbeitsaufträge</h1>
+
+<article>
+  <h2>Neuer Auftrag</h2>
+  <form method="post" action="/orders">
+    {{template "csrf" .}}
+    <div class="grid">
+      <label>Titel
+        <input name="title" required maxlength="200" placeholder="z. B. Kunde Muster – Relaunch">
+      </label>
+      <label>Beschreibung
+        <input name="description" maxlength="500" placeholder="kurz beschreiben">
+      </label>
+    </div>
+    <button type="submit">Auftrag erstellen</button>
+  </form>
+</article>
+
+<h2>Übersicht <span class="muted">· aktualisiert automatisch</span></h2>
+<div id="order-list" hx-get="/orders" hx-trigger="every 30s" hx-swap="innerHTML">
+  {{template "order-list" .}}
+</div>
+{{template "footer" .}}

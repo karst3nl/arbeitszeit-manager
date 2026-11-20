@@ -1,0 +1,84 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+{{template "header" .}}
+<p><a href="/">← Alle Aufträge</a></p>
+
+<h1>{{.Order.Title}}</h1>
+{{if .Order.Description}}<p class="muted">{{.Order.Description}}</p>{{end}}
+
+<p class="muted">
+  Erstellt von {{.Order.OwnerName}} · {{date .Order.CreatedAt}}
+  {{if .Order.AssigneeName}} · Bearbeitet von {{.Order.AssigneeName}}{{end}}
+</p>
+
+{{if .Order.Interrupted}}
+  <div class="error">Der Timer wurde nach einem Neustart korrigiert. Bitte die Zeiten prüfen.</div>
+{{end}}
+
+{{template "timer" .}}
+
+<section>
+  <h2>Aufgaben</h2>
+  {{if .Tasks}}
+    <div class="task-list">
+      {{range .Tasks}}
+        <div class="task-row">
+          <form method="post" action="/orders/{{$.Order.ID}}/tasks/{{.ID}}" class="task-form">
+            {{template "csrf" $}}
+            <label class="task-done">
+              <input type="checkbox" name="done" {{if .Done}}checked{{end}} aria-label="Erledigt">
+            </label>
+            <input name="title" value="{{.Title}}" maxlength="200" aria-label="Aufgabe">
+            <input type="number" name="planned" min="0" max="60000" value="{{.PlannedMinutes}}" aria-label="Geplante Minuten">
+            <button type="submit" class="secondary">Speichern</button>
+          </form>
+          <form method="post" action="/orders/{{$.Order.ID}}/tasks/{{.ID}}/delete" class="inline">
+            {{template "csrf" $}}
+            <button type="submit" class="outline secondary">Löschen</button>
+          </form>
+        </div>
+      {{end}}
+    </div>
+  {{else}}
+    <p class="muted">Noch keine Aufgaben erfasst.</p>
+  {{end}}
+
+  <form method="post" action="/orders/{{.Order.ID}}/tasks">
+    {{template "csrf" .}}
+    <div class="grid">
+      <label>Neue Aufgabe
+        <input name="title" required maxlength="200" placeholder="was ist zu tun?">
+      </label>
+      <label>Geplante Minuten
+        <input type="number" name="planned" min="0" max="60000" value="30" required>
+      </label>
+    </div>
+    <button type="submit">Hinzufügen</button>
+  </form>
+</section>
+
+<section>
+  <h2>Zuordnung</h2>
+  <form method="post" action="/orders/{{.Order.ID}}/assignee">
+    {{template "csrf" .}}
+    <label>Bearbeitet von
+      <select name="assignee_id">
+        <option value="0">— niemand —</option>
+        {{range .Users}}
+          <option value="{{.ID}}" {{if eq .ID $.Order.AssigneeID}}selected{{end}}>{{.DisplayName}}</option>
+        {{end}}
+      </select>
+    </label>
+    <button type="submit" class="secondary">Speichern</button>
+  </form>
+</section>
+
+<section>
+  <h2>Auftrag löschen</h2>
+  <p class="muted">Löscht den Auftrag unwiderruflich zusammen mit Aufgaben, Zeiten und Auswertung.</p>
+  <form method="post" action="/orders/{{.Order.ID}}/delete"
+        onsubmit="return confirm('Auftrag wirklich löschen?');">
+    {{template "csrf" .}}
+    <button type="submit" class="outline secondary">Auftrag löschen</button>
+  </form>
+</section>
+{{template "footer" .}}

@@ -1,0 +1,30 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+{{define "order-list"}}
+{{if .Orders}}
+  <div class="grid">
+    {{range .Orders}}
+      <article class="order-card">
+        <header>
+          <strong><a href="/orders/{{.ID}}">{{.Title}}</a></strong>
+        </header>
+        <p class="muted">{{.Description}}</p>
+        <p>
+          <span class="badge {{if .Done}}done{{else if eq .TimerState "running"}}running{{else if eq .TimerState "paused"}}paused{{else}}open{{end}}">
+            {{if .Done}}abgeschlossen{{else if eq .TimerState "running"}}läuft{{else if eq .TimerState "paused"}}pausiert{{else}}offen{{end}}
+          </span>
+          {{if .Interrupted}}<span class="badge warn">Timer korrigiert</span>{{end}}
+        </p>
+        <p class="figures">
+          Soll <strong>{{minutes .PlannedMinutes}}</strong> ·
+          Ist <strong>{{dur .ActualSeconds}}</strong> ·
+          Δ <strong>{{signed (.DeltaSeconds)}}</strong>
+          <span class="muted">({{pct (.DeltaPercent)}})</span>
+        </p>
+        <footer class="muted">{{.OwnerName}} · {{date .CreatedAt}}</footer>
+      </article>
+    {{end}}
+  </div>
+{{else}}
+  <p>Noch keine Aufträge vorhanden. oben einen anlegen.</p>
+{{end}}
+{{end}}

@@ -1,0 +1,59 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+{{define "timer"}}
+<div id="timer" class="timer" hx-get="/orders/{{.Order.ID}}/timer" hx-trigger="every 30s" hx-swap="outerHTML">
+  {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+  <div class="timer-main">
+    <span id="timer-display" class="timer-time"
+          data-elapsed="{{.Elapsed}}"
+          data-state="{{.State}}"
+          data-since="{{.Since}}"
+          data-planned="{{.Order.PlannedMinutes}}"
+          data-now="{{.ServerNow}}">{{dur .Elapsed}}</span>
+    <span class="badge {{if eq .State "running"}}running{{else if eq .State "paused"}}paused{{else}}open{{end}}">
+      {{if eq .State "running"}}läuft{{else if eq .State "paused"}}pausiert{{else}}gestoppt{{end}}
+    </span>
+  </div>
+
+  <div class="timer-actions">
+    {{if eq .State "stopped"}}
+      {{if not .Order.Done}}
+        <form method="post" action="/orders/{{.Order.ID}}/timer/start"
+              hx-post="/orders/{{.Order.ID}}/timer/start" hx-target="#timer" hx-swap="outerHTML">
+          {{template "csrf" .}}<button type="submit">▶ Start</button>
+        </form>
+      {{end}}
+    {{else if eq .State "running"}}
+      <form method="post" action="/orders/{{.Order.ID}}/timer/pause"
+            hx-post="/orders/{{.Order.ID}}/timer/pause" hx-target="#timer" hx-swap="outerHTML">
+        {{template "csrf" .}}<button type="submit" class="secondary">⏸ Pause</button>
+      </form>
+      <form method="post" action="/orders/{{.Order.ID}}/timer/stop"
+            hx-post="/orders/{{.Order.ID}}/timer/stop" hx-target="#timer" hx-swap="outerHTML">
+        {{template "csrf" .}}<button type="submit" class="outline">⏹ Ende</button>
+      </form>
+    {{else}}
+      <form method="post" action="/orders/{{.Order.ID}}/timer/resume"
+            hx-post="/orders/{{.Order.ID}}/timer/resume" hx-target="#timer" hx-swap="outerHTML">
+        {{template "csrf" .}}<button type="submit">▶ Weiter</button>
+      </form>
+      <form method="post" action="/orders/{{.Order.ID}}/timer/stop"
+            hx-post="/orders/{{.Order.ID}}/timer/stop" hx-target="#timer" hx-swap="outerHTML">
+        {{template "csrf" .}}<button type="submit" class="outline">⏹ Ende</button>
+      </form>
+    {{end}}
+    {{if .Order.Done}}
+      <a class="button secondary" href="/orders/{{.Order.ID}}/report">Auswertung ansehen</a>
+      <form method="post" action="/orders/{{.Order.ID}}/timer/reopen">
+        {{template "csrf" .}}<button type="submit" class="outline secondary">Wieder öffnen</button>
+      </form>
+    {{end}}
+  </div>
+
+  <p class="figures">
+    Soll <strong>{{minutes .Order.PlannedMinutes}}</strong> ·
+    Ist <strong id="timer-ist">{{dur .Elapsed}}</strong> ·
+    Δ <strong id="timer-delta">{{signed .Delta}}</strong>
+    <span class="muted">(<span id="timer-delta-pct">{{pct .DeltaPct}}</span>)</span>
+  </p>
+</div>
+{{end}}
