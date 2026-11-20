@@ -42,11 +42,12 @@ body { padding-bottom: 3rem; }
   margin: 0;
   padding: .35rem .7rem;
   font-size: .85rem;
+  color: #000;
 }
 .summary-chip[aria-pressed="true"] {
   border-color: var(--pico-primary);
   background: var(--pico-primary);
-  color: var(--pico-primary-inverse);
+  color: #000;
 }
 .summary-count {
   display: inline-flex;
@@ -57,10 +58,11 @@ body { padding-bottom: 3rem; }
   border-radius: 1rem;
   background: var(--pico-muted-border-color);
   font-size: .8rem;
+  color: #000;
 }
 .summary-chip[aria-pressed="true"] .summary-count {
   background: var(--pico-primary-inverse);
-  color: var(--pico-primary);
+  color: #000;
 }
 
 @media (max-width: 1099px) {
