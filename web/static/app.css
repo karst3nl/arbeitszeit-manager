@@ -280,7 +280,7 @@ footer.container, footer.page-footer { padding-top: 1.5rem; border-top: 1px soli
     align-items: start;
   }
   .page-columns.side-first { grid-template-columns: 320px minmax(0, 1fr); }
-  .page-columns.compact-create { grid-template-columns: 290px minmax(0, 1fr); gap: 1.25rem; }
+  .page-columns.compact-create { grid-template-columns: 330px minmax(0, 1fr); gap: 1.25rem; }
   .compact-create .col-side article { padding: 1rem; }
   .compact-create .col-side h2 { font-size: 1.1rem; margin-bottom: .6rem; }
   .compact-create form { font-size: .85rem; }
