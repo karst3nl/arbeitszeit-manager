@@ -280,6 +280,23 @@ footer.container, footer.page-footer { padding-top: 1.5rem; border-top: 1px soli
     align-items: start;
   }
   .page-columns.side-first { grid-template-columns: 320px minmax(0, 1fr); }
+  .page-columns.compact-create { grid-template-columns: 260px minmax(0, 1fr); gap: 1.25rem; }
+  .compact-create .col-side article { padding: 1rem; }
+  .compact-create .col-side h2 { font-size: 1.1rem; margin-bottom: .6rem; }
+  .compact-create form { font-size: .85rem; }
+  .compact-create form .grid { gap: .5rem; }
+  .compact-create form label { margin-bottom: 0; font-size: .85rem; line-height: 1.25; }
+  .compact-create form input,
+  .compact-create form select {
+    font-size: .85rem;
+    line-height: 1.2;
+    padding: .35rem .5rem;
+    margin: .15rem 0 .35rem;
+    height: auto;
+    min-height: 0;
+  }
+  .compact-create form small { display: block; font-size: .72rem; line-height: 1.2; margin-top: -.15rem; }
+  .compact-create form button { font-size: .85rem; padding: .4rem .8rem; margin-top: .25rem; }
   .page-columns.even { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .page-columns .col-side { position: sticky; top: 0; }
   .page-columns article { margin-bottom: 0; }
