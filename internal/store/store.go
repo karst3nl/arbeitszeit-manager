@@ -376,7 +376,9 @@ const orderSelect = `
 	       o.owner_id, COALESCE(ow.display_name, ''),
 	       o.assignee_id, COALESCE(aw.display_name, ''),
 	       o.timer_state, o.timer_started_at, o.created_at, o.completed_at, o.notes,
-	       COALESCE((SELECT SUM(planned_minutes) FROM tasks WHERE work_order_id = o.id), 0),
+	       o.planned_minutes,
+	       CASE WHEN o.planned_minutes > 0 THEN o.planned_minutes
+	            ELSE COALESCE((SELECT SUM(planned_minutes) FROM tasks WHERE work_order_id = o.id), 0) END,
 	       COALESCE((SELECT SUM(COALESCE(end_at, ?) - start_at) FROM time_segments
 	                  WHERE work_order_id = o.id), 0),
 	       EXISTS(SELECT 1 FROM time_segments WHERE work_order_id = o.id AND interrupted = 1)
@@ -389,7 +391,7 @@ func scanOrder(row interface{ Scan(...any) error }) (*model.Order, error) {
 	err := row.Scan(&o.ID, &o.Title, &o.Description, &o.Status,
 		&o.OwnerID, &o.OwnerName, &o.AssigneeID, &o.AssigneeName,
 		&o.TimerState, &o.TimerStartedAt, &o.CreatedAt, &o.CompletedAt, &o.Notes,
-		&o.PlannedMinutes, &o.ActualSeconds, &o.Interrupted)
+		&o.SollMinutes, &o.PlannedMinutes, &o.ActualSeconds, &o.Interrupted)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -423,10 +425,11 @@ func (s *Store) Order(id int64) (*model.Order, error) {
 	return scanOrder(s.db.QueryRow(orderSelect+` WHERE o.id = ?`, time.Now().Unix(), id))
 }
 
-// CreateOrder inserts a new work order.
-func (s *Store) CreateOrder(title, description string, ownerID int64) (int64, error) {
-	res, err := s.db.Exec(`INSERT INTO work_orders(title, description, owner_id, created_at) VALUES(?, ?, ?, ?)`,
-		title, description, ownerID, time.Now().Unix())
+// CreateOrder inserts a new work order. plannedMinutes = 0 means the Soll is
+// derived from the sum of the order's task minutes.
+func (s *Store) CreateOrder(title, description string, plannedMinutes, ownerID int64) (int64, error) {
+	res, err := s.db.Exec(`INSERT INTO work_orders(title, description, planned_minutes, owner_id, created_at)
+		VALUES(?, ?, ?, ?, ?)`, title, description, plannedMinutes, ownerID, time.Now().Unix())
 	if err != nil {
 		return 0, err
 	}
@@ -451,6 +454,13 @@ func (s *Store) ClaimOrder(orderID, userID int64) error {
 		return ErrConflict
 	}
 	return nil
+}
+
+// SetPlannedMinutes stores the explicit Soll of an order. 0 restores the
+// fallback to the sum of task minutes.
+func (s *Store) SetPlannedMinutes(orderID, minutes int64) error {
+	_, err := s.db.Exec(`UPDATE work_orders SET planned_minutes = ? WHERE id = ?`, minutes, orderID)
+	return err
 }
 
 // SetNotes stores the evaluation notes.
@@ -688,7 +698,8 @@ func buildReport(ctx context.Context, q queryer, orderID, now int64) (*model.Rep
 	var r model.Report
 	var completedAt int64
 	err := q.QueryRow(`SELECT id, title, notes,
-		COALESCE((SELECT SUM(planned_minutes) FROM tasks WHERE work_order_id = work_orders.id), 0),
+		CASE WHEN planned_minutes > 0 THEN planned_minutes
+		     ELSE COALESCE((SELECT SUM(planned_minutes) FROM tasks WHERE work_order_id = work_orders.id), 0) END,
 		COALESCE((SELECT SUM(COALESCE(end_at, ?) - start_at) FROM time_segments
 		          WHERE work_order_id = work_orders.id), 0),
 		COALESCE(completed_at, 0)

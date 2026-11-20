@@ -157,7 +157,7 @@ curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'login: %{http_code}\n' \
 
 # Auftrag anlegen
 curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'auftrag: %{http_code}\n' \
-  -d "csrf=$CSRF&title=Smoke-Test" "$BASE/orders"
+  -d "csrf=$CSRF&title=Smoke-Test&planned=90" "$BASE/orders"
 
 # Aufgabe mit 60 geplanten Minuten
 curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'aufgabe: %{http_code}\n' \
@@ -174,7 +174,9 @@ curl -sS -b "$JAR" "$BASE/orders/1/report.csv" | head -20
 ```
 
 Erwartung: alle Statuscodes `200` (mit `-L` folgt curl den Redirects), CSV
-enthält `Auftrag;Smoke-Test`, `Soll (Minuten);60`, `Ist (Sekunden);…`.
+enthält `Auftrag;Smoke-Test`, `Soll (Minuten);90`, `Ist (Sekunden);…`.
+Die `90` kommt aus der Soll-Zeit beim Anlegen; ohne diese Angabe würde das
+Soll aus der Summe der Aufgaben (hier `60`) berechnet.
 Ohne `-L` sind die ersten drei Aufrufe `303 See Other` – das ist ebenfalls
 normal, dann wird nur die Zielseite nicht mitgeladen.
 
@@ -182,7 +184,7 @@ normal, dann wird nur die Zielseite nicht mitgeladen.
 
 1. <http://127.0.0.1:8080/login> öffnen
 2. Anmelden mit `admin` / `testpass123`
-3. Auftrag anlegen → Aufgabe mit geplanten Minuten → Timer Start/Pause/Weiter/Ende
+3. Auftrag mit Soll-Zeit anlegen (`0` = Summe der Aufgaben) → Aufgabe mit geplanten Minuten → Timer Start/Pause/Weiter/Ende
 4. „Auswertung ansehen" und den CSV-Export prüfen
 5. Oben rechts **Konto** (Passwort ändern) und **Nutzer** ( Admin-Seite) testen
 

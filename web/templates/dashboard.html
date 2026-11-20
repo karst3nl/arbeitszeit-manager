@@ -13,6 +13,10 @@
       <label>Beschreibung
         <input name="description" maxlength="500" placeholder="kurz beschreiben">
       </label>
+      <label>Soll-Zeit in Minuten
+        <input name="planned" type="number" min="0" max="60000" value="0" required>
+        <small class="muted">0 = Summe der Aufgaben als Soll verwenden</small>
+      </label>
     </div>
     <button type="submit">Auftrag erstellen</button>
   </form>

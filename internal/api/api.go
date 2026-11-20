@@ -39,11 +39,12 @@ type pageData struct {
 	Error   string
 	Version string
 
-	Orders []model.Order
-	Order  *model.Order
-	Tasks  []model.Task
-	Users  []model.User
-	Report *model.Report
+	Orders      []model.Order
+	Order       *model.Order
+	Tasks       []model.Task
+	TaskMinutes int64
+	Users       []model.User
+	Report      *model.Report
 
 	Elapsed   int64
 	Delta     int64
@@ -109,6 +110,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /orders/{id}/tasks/{taskID}", s.auth.Require(http.HandlerFunc(s.updateTask)))
 	mux.Handle("POST /orders/{id}/tasks/{taskID}/delete", s.auth.Require(http.HandlerFunc(s.deleteTask)))
 	mux.Handle("POST /orders/{id}/notes", s.auth.Require(http.HandlerFunc(s.saveNotes)))
+	mux.Handle("POST /orders/{id}/soll", s.auth.Require(http.HandlerFunc(s.setSoll)))
 	mux.Handle("GET /orders/{id}/timer", s.auth.Require(http.HandlerFunc(s.timerFragment)))
 	mux.Handle("POST /orders/{id}/timer/{action}", s.auth.Require(http.HandlerFunc(s.timerAction)))
 	mux.Handle("GET /orders/{id}/report", s.auth.Require(http.HandlerFunc(s.report)))
@@ -319,12 +321,48 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/?err=Titel+darf+nicht+leer+sein.", http.StatusSeeOther)
 		return
 	}
-	id, err := s.store.CreateOrder(title, r.FormValue("description"), auth.UserFrom(r).ID)
+	plannedValue := r.FormValue("planned")
+	if plannedValue == "" {
+		plannedValue = "0"
+	}
+	planned, err := strconv.ParseInt(plannedValue, 10, 64)
+	if err != nil || planned < 0 || planned > 60000 {
+		http.Redirect(w, r, "/?err=Soll-Zeit+muss+zwischen+0+und+60000+Minuten+liegen.", http.StatusSeeOther)
+		return
+	}
+	id, err := s.store.CreateOrder(title, r.FormValue("description"), planned, auth.UserFrom(r).ID)
 	if err != nil {
 		s.fail(w, http.StatusInternalServerError, "Auftrag konnte nicht erstellt werden")
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/orders/%d?ok=Auftrag+erstellt.", id), http.StatusSeeOther)
+}
+
+func (s *Server) setSoll(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r, "id")
+	if !ok {
+		s.fail(w, http.StatusBadRequest, "Ungültige Auftragsnummer")
+		return
+	}
+	o, err := s.store.Order(id)
+	if err != nil || o == nil || !canEdit(auth.UserFrom(r), o) {
+		s.fail(w, http.StatusForbidden, "Keine Berechtigung")
+		return
+	}
+	if o.Done() {
+		s.fail(w, http.StatusConflict, "Auftrag ist abgeschlossen. Erst wieder öffnen.")
+		return
+	}
+	minutes, err := strconv.ParseInt(r.FormValue("planned"), 10, 64)
+	if err != nil || minutes < 0 || minutes > 60000 {
+		http.Redirect(w, r, fmt.Sprintf("/orders/%d?err=Soll-Zeit+muss+zwischen+0+und+60000+Minuten+liegen.", id), http.StatusSeeOther)
+		return
+	}
+	if err := s.store.SetPlannedMinutes(id, minutes); err != nil {
+		s.fail(w, http.StatusInternalServerError, "Soll-Zeit konnte nicht gespeichert werden")
+		return
+	}
+	http.Redirect(w, r, fmt.Sprintf("/orders/%d?ok=Soll-Zeit+gespeichert.", id), http.StatusSeeOther)
 }
 
 func (s *Server) orderPage(w http.ResponseWriter, r *http.Request) {
@@ -361,6 +399,9 @@ func (s *Server) orderPage(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Title = o.Title
 	data.Tasks = tasks
+	for _, task := range tasks {
+		data.TaskMinutes += task.PlannedMinutes
+	}
 	data.Users = users
 	s.render(w, "order.html", data)
 }

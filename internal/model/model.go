@@ -35,6 +35,10 @@ type Order struct {
 	CreatedAt      int64
 	CompletedAt    int64
 	Notes          string
+	// SollMinutes is the explicitly entered target for the whole order.
+	// 0 means the Soll is the sum of all task minutes.
+	SollMinutes int64
+	// PlannedMinutes is the effective Soll used for the evaluation.
 	PlannedMinutes int64
 	ActualSeconds  int64
 	Interrupted    bool

@@ -26,7 +26,7 @@ func testStore(t *testing.T) *Store {
 
 func setupOrder(t *testing.T, s *Store) int64 {
 	t.Helper()
-	id, err := s.CreateOrder("Testauftrag", "Beschreibung", 1)
+	id, err := s.CreateOrder("Testauftrag", "Beschreibung", 0, 1)
 	if err != nil {
 		t.Fatalf("create order: %v", err)
 	}
@@ -37,6 +37,55 @@ func setupOrder(t *testing.T, s *Store) int64 {
 		t.Fatalf("add task 2: %v", err)
 	}
 	return id
+}
+
+func TestOrderSollMinutes(t *testing.T) {
+	s := testStore(t)
+
+	// Without an explicit Soll the sum of the task minutes is used, so
+	// existing orders keep their previous behaviour.
+	fallbackID := setupOrder(t, s)
+	o, err := s.Order(fallbackID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o.SollMinutes != 0 || o.PlannedMinutes != 180 {
+		t.Fatalf("fallback Soll: explicit=%d effective=%d", o.SollMinutes, o.PlannedMinutes)
+	}
+
+	explicitID, err := s.CreateOrder("Soll-Auftrag", "", 90, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AddTask(explicitID, "Teil", 30); err != nil {
+		t.Fatal(err)
+	}
+	o, err = s.Order(explicitID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o.SollMinutes != 90 || o.PlannedMinutes != 90 {
+		t.Fatalf("explicit Soll: explicit=%d effective=%d", o.SollMinutes, o.PlannedMinutes)
+	}
+	rep, err := s.Report(explicitID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.PlannedMinutes != 90 {
+		t.Fatalf("report Soll: %d", rep.PlannedMinutes)
+	}
+
+	// Resetting to 0 restores the task-based fallback.
+	if err := s.SetPlannedMinutes(explicitID, 0); err != nil {
+		t.Fatal(err)
+	}
+	o, err = s.Order(explicitID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o.SollMinutes != 0 || o.PlannedMinutes != 30 {
+		t.Fatalf("Soll after reset: explicit=%d effective=%d", o.SollMinutes, o.PlannedMinutes)
+	}
 }
 
 func rewindOpenSegment(t *testing.T, s *Store, seconds int64) {

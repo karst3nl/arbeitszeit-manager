@@ -5,6 +5,9 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Soll-Zeit direkt beim Anlegen eines Auftrags; `0` übernimmt weiterhin die Summe der Aufgaben und lässt sich im Auftrag später ändern
+
 ### Behoben
 - Live-Ist-Zeit in Übersicht und Aufträgen während eines laufenden Timers
 - Auftragstitel in gespeicherter Auswertung und CSV-Export
