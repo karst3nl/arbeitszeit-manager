@@ -26,11 +26,13 @@ body { padding-bottom: 3rem; }
 
 /* Desktop-only chrome; hidden below the breakpoint so the phone view is
    exactly the same as before. */
-.sidebar, .app-header, .app-status { display: none; }
+.sidebar, .app-status { display: none; }
 
 .container { max-width: 960px; }
 
 .muted { color: var(--pico-muted-color); font-size: .9rem; }
+
+.page-title { font-weight: 600; margin: 0 0 .75rem; }
 
 .flash, .error {
   padding: .75rem 1rem;
@@ -137,7 +139,7 @@ footer.container, footer.page-footer { padding-top: 1.5rem; border-top: 1px soli
   .app-shell {
     display: grid;
     grid-template-columns: 210px minmax(0, 1fr);
-    grid-template-rows: 58px minmax(0, 1fr) 32px;
+    grid-template-rows: minmax(0, 1fr) 32px;
     height: 100vh;
   }
 
@@ -212,23 +214,9 @@ footer.container, footer.page-footer { padding-top: 1.5rem; border-top: 1px soli
     margin-bottom: .4rem;
   }
 
-  .app-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    grid-column: 2;
-    grid-row: 1;
-    padding: 0 1.75rem;
-    background: var(--pico-background-color);
-    border-bottom: 1px solid var(--pico-muted-border-color);
-  }
-  .breadcrumb { font-size: .9rem; color: var(--pico-muted-color); }
-  .breadcrumb span { margin: 0 .45rem; }
-  .breadcrumb strong { color: var(--pico-color); font-weight: 600; }
-
   .app-main {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 1;
     max-width: none;
     margin: 0;
     padding: 1.5rem 1.75rem 2.5rem;
@@ -267,7 +255,7 @@ footer.container, footer.page-footer { padding-top: 1.5rem; border-top: 1px soli
     align-items: center;
     justify-content: space-between;
     grid-column: 2;
-    grid-row: 3;
+    grid-row: 2;
     padding: 0 1.75rem;
     background: var(--pico-background-color);
     border-top: 1px solid var(--pico-muted-border-color);

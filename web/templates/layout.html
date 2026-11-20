@@ -63,13 +63,6 @@
       </div>
     </aside>
 
-    <header class="app-header">
-      <div class="breadcrumb">Arbeitszeit <span>/</span> <strong>{{.Title}}</strong></div>
-      <span class="badge {{if .User.IsAdmin}}done{{else}}open{{end}}">
-        {{if .User.IsAdmin}}Admin{{else}}Nutzer{{end}}
-      </span>
-    </header>
-
     <main class="app-main">
       {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
       {{if .Error}}<div class="error">{{.Error}}</div>{{end}}

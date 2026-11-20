@@ -2,7 +2,7 @@
 {{template "header" .}}
 <p><a href="/orders/{{.Report.OrderID}}">← Zum Auftrag</a></p>
 
-<h1>Auswertung: {{.Report.Title}}</h1>
+<p class="page-title">Auswertung · {{.Report.Title}}</p>
 <p><a class="button secondary" href="/orders/{{.Report.OrderID}}/report.csv">CSV herunterladen</a></p>
 <p class="muted">Abgeschlossen am {{date .Report.CreatedAt}}</p>
 

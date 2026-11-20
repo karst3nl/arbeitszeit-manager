@@ -2,7 +2,7 @@
 {{template "header" .}}
 <p><a href="/">← Alle Aufträge</a></p>
 
-<h1>{{.Order.Title}}</h1>
+<p class="page-title">{{.Order.Title}}</p>
 {{if .Order.Description}}<p class="muted">{{.Order.Description}}</p>{{end}}
 
 <div class="page-columns">

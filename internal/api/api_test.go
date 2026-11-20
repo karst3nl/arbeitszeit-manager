@@ -204,7 +204,7 @@ func TestFullOrderLifecycle(t *testing.T) {
 	}
 
 	body = get(t, client, base+"/admin")
-	if !strings.Contains(body, "Nutzer verwalten") {
+	if !strings.Contains(body, "Neuer Nutzer") {
 		t.Fatalf("admin page missing")
 	}
 }
@@ -295,7 +295,7 @@ func TestAdminTaskTemplatesAndOrderCreation(t *testing.T) {
 	}
 
 	body = post(t, client, base+"/admin/task-templates/2/delete", url.Values{"csrf": {csrf}})
-	if !strings.Contains(body, "Nutzer verwalten") {
+	if !strings.Contains(body, "Neuer Nutzer") {
 		t.Fatalf("delete did not return to admin page: %s", body)
 	}
 	body = get(t, client, base+"/")
@@ -343,7 +343,7 @@ func TestPasswordChangeAndAdminReset(t *testing.T) {
 		"csrf": {csrf}, "old_password": {"testpassword"},
 		"new_password": {"newpassword1"}, "repeat_password": {"newpassword1"},
 	})
-	if !strings.Contains(body, "Mein Konto") {
+	if !strings.Contains(body, "Anzeigename") {
 		t.Fatalf("password change did not return to account page: %s", body)
 	}
 	loginAsWithPassword(t, base, "admin", "newpassword1")
@@ -351,7 +351,7 @@ func TestPasswordChangeAndAdminReset(t *testing.T) {
 	body = post(t, client, base+"/admin/users/2/password", url.Values{
 		"csrf": {csrf}, "password": {"mianewpass1"},
 	})
-	if !strings.Contains(body, "Nutzer verwalten") {
+	if !strings.Contains(body, "Neuer Nutzer") {
 		t.Fatalf("admin reset did not return to user list: %s", body)
 	}
 	loginAsWithPassword(t, base, "mia", "mianewpass1")

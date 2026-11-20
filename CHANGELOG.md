@@ -6,12 +6,15 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ## [Unreleased]
 
 ### Hinzugefügt
-- Desktop-Oberfläche mit fester Seitenleiste, Titelleiste und Statusleiste ab 1100 px; Navigation zeigt den aktiven Bereich
+- Desktop-Oberfläche mit fester Seitenleiste und Statusleiste ab 1100 px; Navigation zeigt den aktiven Bereich
 - Startseite nach Rolle: Admins sehen alle offenen und in Bearbeitung befindlichen Aufträge plus Formular zum Anlegen; Nutzer nur die ihnen zugewiesenen Aufträge
 - Aufgaben-Vorlagen im Adminbereich; beim Anlegen eines Auftrags sind mehrere Vorlagen per Mehrfachauswahl wählbar und werden direkt kopiert
 - Desktop-Layout: breitere Ansicht und zweispaltige Seiten ab 1100 px; Smartphone-Layout bleibt unverändert
 - Auftragstitel wird automatisch aus Kundenname und Kennzeichen gebildet
 - Soll-Zeit ist ausschließlich die Summe der geplanten Minuten aller Aufgaben und passt sich bei Änderungen automatisch an; das separate Soll-Feld entfällt
+
+### Geändert
+- Obere Brotkrümelleiste und große Seitenüberschriften entfernt; die Seitenleiste zeigt den aktiven Bereich, Auftrags- und Auswertungstitel bleiben als kompakte Zeile erhalten
 
 ### Behoben
 - Live-Ist-Zeit in Übersicht und Aufträgen während eines laufenden Timers

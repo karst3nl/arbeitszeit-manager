@@ -18,7 +18,7 @@ Schlanke Webapp für Arbeitsaufträge mit geplanten Zeiten, einem Timer für die
 - **Rollenbasierte Startseite**: Admins sehen offene und in Bearbeitung befindliche Aufträge aller Nutzer sowie das Formular zum Anlegen neuer Aufträge; normale Nutzer sehen nur die ihnen zugewiesenen Aufträge
 - **Pflege**: Aufträge löschen (nicht bei laufendem Timer), Übersicht aktualisiert sich automatisch alle 30 Sekunden
 - **Robust**: SQLite im WAL-Modus, Backup-Skript, Reboot-Recovery für hängende Timer
-- **Responsiv**: kompakte Ansicht fürs Smartphone, am Desktop automatisch eine App-Oberfläche mit fester Seitenleiste, Titelleiste und Statusleiste – ohne separate App oder Umschalter
+- **Responsiv**: kompakte Ansicht fürs Smartphone, am Desktop automatisch eine App-Oberfläche mit fester Seitenleiste und Statusleiste – ohne separate App oder Umschalter
 - **Offline-fähig**: keine CDNs, keine externen Dienste, alle Assets liegen im Repo
 - **Schlank**: ein Binary, ~20 MB RAM für die App, kein Docker nötig
 
