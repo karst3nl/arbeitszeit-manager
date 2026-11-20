@@ -78,10 +78,12 @@ type pageData struct {
 }
 
 var templateFuncs = template.FuncMap{
-	"dur":     timer.Duration,
-	"signed":  timer.SignedDuration,
-	"minutes": timer.Minutes,
-	"date":    timer.DateTime,
+	"dur":       timer.Duration,
+	"signed":    timer.SignedDuration,
+	"minutes":   timer.Minutes,
+	"aw":        timer.AWFromMinutes,
+	"awSeconds": timer.AWFromSeconds,
+	"date":      timer.DateTime,
 	"upperFirst": func(s string) string {
 		if s == "" {
 			return "?"
@@ -402,6 +404,7 @@ func (s *Server) adminOrders(r *http.Request, data *pageData) error {
 	if err != nil {
 		return err
 	}
+	data.Users = users
 	orders, err := s.store.Orders()
 	if err != nil {
 		return err
@@ -519,9 +522,23 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusBadRequest, "Ungültige Formulardaten")
 		return
 	}
-	planned, err := strconv.ParseInt(strings.TrimSpace(r.FormValue("planned")), 10, 64)
-	if err != nil || planned < 1 || planned > 60000 {
-		http.Redirect(w, r, "/?err=Soll+zwischen+1+und+60000+Minuten+angeben.", http.StatusSeeOther)
+	planned, err := timer.ParseAW(r.FormValue("aw"))
+	if err != nil {
+		http.Redirect(w, r, "/?err=Soll+in+AW+angeben+(10+AW+%3D+1+Stunde).", http.StatusSeeOther)
+		return
+	}
+	assigneeID, err := strconv.ParseInt(strings.TrimSpace(r.FormValue("assignee_id")), 10, 64)
+	if err != nil || assigneeID <= 0 {
+		http.Redirect(w, r, "/?err=Bitte+einen+Nutzer+f%C3%BCr+den+Auftrag+w%C3%A4hlen.", http.StatusSeeOther)
+		return
+	}
+	active, err := s.store.ActiveUser(assigneeID)
+	if err != nil {
+		s.fail(w, http.StatusInternalServerError, "Nutzer konnten nicht geprüft werden")
+		return
+	}
+	if !active {
+		http.Redirect(w, r, "/?err=Der+gew%C3%A4hlte+Nutzer+ist+nicht+verf%C3%BCgbar.", http.StatusSeeOther)
 		return
 	}
 	var templateIDs []int64
@@ -538,9 +555,9 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 	var id int64
 	if len(templateIDs) > 0 {
 		id, err = s.store.CreateOrderFromTemplates(title, r.FormValue("description"),
-			auth.UserFrom(r).ID, planned, templateIDs)
+			auth.UserFrom(r).ID, assigneeID, planned, templateIDs)
 	} else {
-		id, err = s.store.CreateOrder(title, r.FormValue("description"), auth.UserFrom(r).ID, planned)
+		id, err = s.store.CreateOrder(title, r.FormValue("description"), auth.UserFrom(r).ID, assigneeID, planned)
 	}
 	if errors.Is(err, store.ErrNotFound) {
 		http.Redirect(w, r, "/?err=Ausgew%C3%A4hlte+Aufgabe+nicht+mehr+vorhanden.", http.StatusSeeOther)
@@ -897,8 +914,11 @@ func (s *Server) reportCSV(w http.ResponseWriter, r *http.Request) {
 		{"Auftrag", csvSafe(rep.Title)},
 		{"Abgeschlossen", timer.DateTime(rep.CreatedAt)},
 		{"Soll (Minuten)", strconv.FormatInt(rep.PlannedMinutes, 10)},
+		{"Soll (AW)", timer.AWFromMinutes(rep.PlannedMinutes)},
 		{"Ist (Sekunden)", strconv.FormatInt(rep.ActualSeconds, 10)},
+		{"Ist (AW)", timer.AWFromSeconds(rep.ActualSeconds)},
 		{"Abweichung (Sekunden)", strconv.FormatInt(rep.DeviationSeconds, 10)},
+		{"Abweichung (AW)", timer.AWFromSeconds(rep.DeviationSeconds)},
 		{"Abweichung (Prozent)", fmt.Sprintf("%.1f", rep.DeviationPercent)},
 		{"Notiz", csvSafe(rep.Notes)},
 		{},
@@ -932,15 +952,19 @@ func (s *Server) admin(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) createTaskTemplate(w http.ResponseWriter, r *http.Request) {
 	title := strings.TrimSpace(r.FormValue("title"))
+	back := "/admin"
+	if r.FormValue("return_to") == "/" {
+		back = "/"
+	}
 	if title == "" {
-		http.Redirect(w, r, "/admin?err=Bezeichnung+erforderlich.", http.StatusSeeOther)
+		http.Redirect(w, r, back+"?err=Bezeichnung+erforderlich.", http.StatusSeeOther)
 		return
 	}
 	if _, err := s.store.CreateTaskTemplate(title); err != nil {
-		http.Redirect(w, r, "/admin?err=Aufgabe+mit+diesem+Namen+existiert+bereits.", http.StatusSeeOther)
+		http.Redirect(w, r, back+"?err=Aufgabe+mit+diesem+Namen+existiert+bereits.", http.StatusSeeOther)
 		return
 	}
-	http.Redirect(w, r, "/admin?ok=Aufgaben-Vorlage+angelegt.", http.StatusSeeOther)
+	http.Redirect(w, r, back+"?ok=Aufgaben-Vorlage+angelegt.", http.StatusSeeOther)
 }
 
 func (s *Server) updateTaskTemplate(w http.ResponseWriter, r *http.Request) {

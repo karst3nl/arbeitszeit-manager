@@ -13,10 +13,11 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - Aufgaben-Vorlagen im Adminbereich vollständig pflegbar (anlegen, umbenennen, löschen); beim Anlegen eines Auftrags wählt man mehrere Vorlagen aus einem Dropdown und kopiert sie direkt in den Auftrag
 - Responsives Layout: breitere zweispaltige Ansicht am Desktop, auf schmalen Displays stapeln sich die Karten und Tabellen werden zu Karten mit Beschriftungen
 - Auftragstitel wird automatisch aus Kundenname und Kennzeichen gebildet
-- Soll-Zeit wird beim Anlegen des Auftrags vom Ersteller als Gesamtminuten gesetzt; bestehende Aufträge behalten ihre bisherige Soll-Summe durch eine Migration
+- Soll-Zeit wird beim Anlegen des Auftrags vom Ersteller in AW gesetzt (10 AW = 1 Stunde, Nachkommastellen erlaubt); bestehende Aufträge behalten ihre bisherige Soll-Summe durch eine Migration
+- Aufträge werden beim Anlegen direkt einem aktiven Nutzer zugewiesen; neue Aufgaben können im Dropdown des Anlegeformulars als Vorlage angelegt werden
 
 ### Geändert
-- Aufgaben und Vorlagen haben keine einzelnen Zeitangaben mehr; Soll und Auswertung beziehen sich auf den gesamten Auftrag
+- Aufgaben und Vorlagen haben keine einzelnen Zeitangaben mehr; Soll und Auswertung beziehen sich auf den gesamten Auftrag. Timer, Auswertung und CSV zeigen AW-Werte zusätzlich zu Stunden/Minuten
 - Große Seitenüberschriften entfernt; Auftrags- und Auswertungstitel bleiben als kompakte Zeile, Navigation und angemeldeter Nutzer stehen in der oberen Leiste
 
 ### Behoben

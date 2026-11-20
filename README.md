@@ -9,11 +9,12 @@ Schlanke Webapp für Arbeitsaufträge mit geplanten Zeiten, einem Timer für die
 ## Funktionen
 
 - **Arbeitsaufträge** mit Titel aus Kundenname und Kennzeichen, Beschreibung und beliebigen Aufgaben ohne einzelne Zeitangaben
-- **Soll-Zeit** wird vom Ersteller beim Anlegen des Auftrags in Minuten gesetzt und gilt für den gesamten Auftrag
-- **Aufgaben-Vorlagen**: Admins legen die Liste im Adminbereich an, benennen sie um und löschen sie; beim Anlegen eines Auftrags sind mehrere Vorlagen per Dropdown-Mehrfachauswahl wählbar und werden direkt kopiert
+- **Soll-Zeit** wird vom Ersteller beim Anlegen in AW gesetzt (10 AW = 1 Stunde, 1 AW = 6 Minuten); Nachkommastellen sind erlaubt. Anzeige und Auswertung zeigen AW zusätzlich zu Stunden/Minuten
+- **Zuweisung beim Anlegen**: der Auftrag wird direkt einem aktiven Nutzer zugeordnet
+- **Aufgaben-Vorlagen**: Admins pflegen die Liste im Adminbereich oder legen neue Aufgaben direkt im Dropdown des Anlegeformulars an; mehrere Vorlagen werden per Mehrfachauswahl in den Auftrag kopiert
 - **Ein Timer pro Auftrag**: Start → Pause → Weiter → Ende, beliebig viele Pausen
 - **Live-Anzeige** der Ist-Zeit mit sekündlichem Browser-Tick und 30-Sekunden-Server-Sync
-- **Auswertung** nach Abschluss: Soll, Ist und Abweichung in Minuten und Prozent, Balkenvergleich, Notiz und CSV-Export
+- **Auswertung** nach Abschluss: Soll, Ist und Abweichung in AW und Stunden/Minuten sowie in Prozent, Balkenvergleich, Notiz und CSV-Export
 - **Mehrnutzerfähig** (mind. 6): Login, Rollen `admin` / `user`, Sessions, CSRF-Schutz; Nutzer können sich offene Aufträge selbst zuordnen, das eigene Passwort ändern und Admins können Passwörter zurücksetzen
 - **Rollenbasierte Startseite**: Admins sehen rechts die anderen Nutzer mit ihren zugeteilten Aufträgen sowie eine Rubrik „Nicht zugeteilt“ und links das Formular zum Anlegen neuer Aufträge; normale Nutzer sehen nur die ihnen zugewiesenen Aufträge
 - **Zählerleiste**: Offen / Läuft / Abgeschlossen mit anklickbaren Zählern zum Filtern; Zähler und Liste aktualisieren sich automatisch alle 30 Sekunden

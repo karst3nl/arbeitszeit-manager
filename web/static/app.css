@@ -217,6 +217,16 @@ label.checkbox input { width: auto; }
   cursor: pointer;
 }
 .template-option input[type="checkbox"] { width: auto; }
+.field-hint { margin: 6px 0 0; font-size: 12px; }
+.template-new {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.template-new input { flex: 1 1 auto; min-width: 0; }
+.template-new button { flex: 0 0 auto; padding: 8px 12px; font-size: 14px; }
 
 .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 button, a.button {

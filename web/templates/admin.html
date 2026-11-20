@@ -36,6 +36,7 @@
       <p class="muted">Stehen beim Anlegen eines Auftrags zur Auswahl.</p>
       <form method="post" action="/admin/task-templates">
         {{template "csrf" .}}
+        <input type="hidden" name="return_to" value="/admin">
         <label>Bezeichnung
           <input name="title" required maxlength="200" placeholder="z. B. Konzeption">
         </label>

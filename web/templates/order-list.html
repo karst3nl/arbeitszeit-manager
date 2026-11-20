@@ -15,9 +15,9 @@
           {{if .Interrupted}}<span class="badge warn">Timer korrigiert</span>{{end}}
         </p>
         <p class="figures">
-          Soll <strong>{{minutes .PlannedMinutes}}</strong> ·
-          Ist <strong>{{dur .ActualSeconds}}</strong> ·
-          Δ <strong>{{signed (.DeltaSeconds)}}</strong>
+          Soll <strong>{{minutes .PlannedMinutes}}</strong> <span class="muted">({{aw .PlannedMinutes}})</span> ·
+          Ist <strong>{{dur .ActualSeconds}}</strong> <span class="muted">({{awSeconds .ActualSeconds}})</span> ·
+          Δ <strong>{{signed (.DeltaSeconds)}}</strong> <span class="muted">({{awSeconds (.DeltaSeconds)}})</span>
           <span class="muted">({{pct (.DeltaPercent)}})</span>
         </p>
         <footer class="muted">{{.OwnerName}} · {{date .CreatedAt}}

@@ -249,6 +249,19 @@ func (s *Store) UserByUsername(username string) (*model.User, error) {
 	return &u, nil
 }
 
+// ActiveUser reports whether the given user exists and is active.
+func (s *Store) ActiveUser(id int64) (bool, error) {
+	var active int
+	err := s.db.QueryRow(`SELECT active FROM users WHERE id = ?`, id).Scan(&active)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return active == 1, nil
+}
+
 // Users lists all users, active ones first.
 func (s *Store) Users() ([]model.User, error) {
 	rows, err := s.db.Query(`SELECT ` + userColumns + ` FROM users ORDER BY active DESC, username`)
@@ -423,10 +436,11 @@ func (s *Store) Order(id int64) (*model.Order, error) {
 	return scanOrder(s.db.QueryRow(orderSelect+` WHERE o.id = ?`, time.Now().Unix(), id))
 }
 
-// CreateOrder inserts a new work order with the Soll chosen by its creator.
-func (s *Store) CreateOrder(title, description string, ownerID, plannedMinutes int64) (int64, error) {
-	res, err := s.db.Exec(`INSERT INTO work_orders(title, description, planned_minutes, owner_id, created_at)
-		VALUES(?, ?, ?, ?, ?)`, title, description, plannedMinutes, ownerID, time.Now().Unix())
+// CreateOrder inserts a new work order with the Soll and assignee chosen by
+// its creator.
+func (s *Store) CreateOrder(title, description string, ownerID, assigneeID, plannedMinutes int64) (int64, error) {
+	res, err := s.db.Exec(`INSERT INTO work_orders(title, description, planned_minutes, owner_id, assignee_id, created_at)
+		VALUES(?, ?, ?, ?, ?, ?)`, title, description, plannedMinutes, ownerID, assigneeID, time.Now().Unix())
 	if err != nil {
 		return 0, err
 	}
@@ -599,7 +613,7 @@ func (s *Store) DeleteTaskTemplate(id int64) error {
 // CreateOrderFromTemplates creates an order and copies every selected task
 // template into it in one transaction. A missing template aborts the whole
 // operation, so no half-created order is left behind.
-func (s *Store) CreateOrderFromTemplates(title, description string, ownerID, plannedMinutes int64, templateIDs []int64) (int64, error) {
+func (s *Store) CreateOrderFromTemplates(title, description string, ownerID, assigneeID, plannedMinutes int64, templateIDs []int64) (int64, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return 0, err
@@ -622,8 +636,8 @@ func (s *Store) CreateOrderFromTemplates(title, description string, ownerID, pla
 		tasks = append(tasks, t)
 	}
 
-	res, err := tx.Exec(`INSERT INTO work_orders(title, description, planned_minutes, owner_id, created_at)
-		VALUES(?, ?, ?, ?, ?)`, title, description, plannedMinutes, ownerID, time.Now().Unix())
+	res, err := tx.Exec(`INSERT INTO work_orders(title, description, planned_minutes, owner_id, assignee_id, created_at)
+		VALUES(?, ?, ?, ?, ?, ?)`, title, description, plannedMinutes, ownerID, assigneeID, time.Now().Unix())
 	if err != nil {
 		return 0, err
 	}

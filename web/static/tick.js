@@ -26,6 +26,13 @@
     return (v < 0 ? '' : '+') + v.toFixed(1) + ' %';
   }
 
+  function aw(seconds) {
+    // 10 AW = 1 Stunde, also 1 AW = 360 Sekunden.
+    var value = Math.round(seconds / 360 * 10) / 10;
+    var text = value.toFixed(1).replace('.', ',').replace(/,0$/, '');
+    return text + ' AW';
+  }
+
   function tick() {
     var el = document.getElementById('timer-display');
     if (!el) {
@@ -59,6 +66,10 @@
     if (deltaEl) deltaEl.textContent = signed(delta);
     var pctEl = document.getElementById('timer-delta-pct');
     if (pctEl) pctEl.textContent = percent(delta, Number(el.dataset.planned || 0) * 60);
+    var istAw = document.getElementById('timer-ist-aw');
+    if (istAw) istAw.textContent = aw(elapsed);
+    var deltaAw = document.getElementById('timer-delta-aw');
+    if (deltaAw) deltaAw.textContent = aw(delta);
   }
 
   tick();

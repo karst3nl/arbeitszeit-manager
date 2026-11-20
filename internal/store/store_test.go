@@ -26,7 +26,7 @@ func testStore(t *testing.T) *Store {
 
 func setupOrder(t *testing.T, s *Store) int64 {
 	t.Helper()
-	id, err := s.CreateOrder("Testauftrag", "Beschreibung", 1, 180)
+	id, err := s.CreateOrder("Testauftrag", "Beschreibung", 1, 1, 180)
 	if err != nil {
 		t.Fatalf("create order: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 		t.Fatalf("unexpected template: %+v", templates[0])
 	}
 
-	orderID, err := s.CreateOrderFromTemplates("Kunde", "", 1, 180, []int64{templateID, secondID})
+	orderID, err := s.CreateOrderFromTemplates("Kunde", "", 1, 2, 180, []int64{templateID, secondID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,12 +107,15 @@ func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 	if err != nil || o.PlannedMinutes != 180 {
 		t.Fatalf("order Soll from templates: %+v, %v", o, err)
 	}
+	if o.AssigneeID != 2 {
+		t.Fatalf("order assignee from creation: %d", o.AssigneeID)
+	}
 
 	before, err := s.Orders()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.CreateOrderFromTemplates("Fehler", "", 1, 60, []int64{templateID, 999}); !errors.Is(err, ErrNotFound) {
+	if _, err := s.CreateOrderFromTemplates("Fehler", "", 1, 2, 60, []int64{templateID, 999}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("missing template: %v", err)
 	}
 	after, err := s.Orders()
@@ -141,6 +144,15 @@ func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 	}
 	if err := s.UpdateTaskTemplate(999, "Gibt es nicht"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("renaming a missing template: %v", err)
+	}
+
+	active, err := s.ActiveUser(1)
+	if err != nil || !active {
+		t.Fatalf("active user: %v, %v", active, err)
+	}
+	active, err = s.ActiveUser(999)
+	if err != nil || active {
+		t.Fatalf("missing user reported active: %v, %v", active, err)
 	}
 }
 
@@ -380,6 +392,9 @@ func TestLastActiveAdminIsProtected(t *testing.T) {
 func TestClaimOrderIsAtomic(t *testing.T) {
 	s := testStore(t)
 	id := setupOrder(t, s)
+	if err := s.SetAssignee(id, 0); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := s.CreateUser("mia", "Mia", "hash", "user"); err != nil {
 		t.Fatal(err)
 	}

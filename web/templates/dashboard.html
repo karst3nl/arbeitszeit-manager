@@ -15,13 +15,23 @@
             <label>Kennzeichen
               <input name="plate" required maxlength="40" placeholder="z. B. M-AB 1234">
             </label>
-            <label>Soll (Minuten)
-              <input type="number" name="planned" min="1" max="60000" value="60" required>
+            <label>Soll (AW)
+              <input name="aw" inputmode="decimal" value="10" required placeholder="z. B. 2,5">
+            </label>
+            <label>Nutzer für den Auftrag
+              <select name="assignee_id" required>
+                {{range .Users}}
+                  {{if .Active}}
+                    <option value="{{.ID}}">{{.DisplayName}} ({{.Username}})</option>
+                  {{end}}
+                {{end}}
+              </select>
             </label>
             <label>Beschreibung (optional)
               <input name="description" maxlength="500" placeholder="kurz beschreiben">
             </label>
           </div>
+          <p class="muted field-hint">10 AW = 1 Stunde, 1 AW = 6 Minuten. Nachkommastellen sind erlaubt.</p>
           <details class="template-picker">
             <summary>Aufgaben auswählen <span class="muted">(Mehrfachauswahl)</span></summary>
             <div class="template-options">
@@ -33,14 +43,22 @@
                   </label>
                 {{end}}
               {{else}}
-                <p class="muted">Noch keine Aufgaben angelegt. Verwaltung im Adminbereich.</p>
+                <p class="muted">Noch keine Aufgaben angelegt.</p>
               {{end}}
+              <div class="template-new">
+                <input form="new-template-form" name="title" required maxlength="200" placeholder="Neue Aufgabe">
+                <button form="new-template-form" type="submit" class="secondary">Anlegen</button>
+              </div>
             </div>
-            <small class="muted">Mehrfachauswahl möglich. Die Liste wird im Adminbereich gepflegt.</small>
+            <small class="muted">Neue Aufgaben werden als Vorlage gespeichert und stehen danach hier zur Auswahl.</small>
           </details>
           <div class="actions">
             <button type="submit">Auftrag erstellen</button>
           </div>
+        </form>
+        <form id="new-template-form" method="post" action="/admin/task-templates">
+          {{template "csrf" .}}
+          <input type="hidden" name="return_to" value="/">
         </form>
       </article>
     </section>

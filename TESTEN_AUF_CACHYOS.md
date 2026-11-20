@@ -159,9 +159,9 @@ curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'login: %{http_code}\n' \
 curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'vorlage: %{http_code}\n' \
   -d "csrf=$CSRF&title=Konzeption" "$BASE/admin/task-templates"
 
-# Auftrag anlegen (Kunde + Kennzeichen ergeben den Titel; Soll in Minuten; mehrere Vorlagen möglich: &template_id=1&template_id=2)
+# Auftrag anlegen (Kunde + Kennzeichen ergeben den Titel; 15 AW = 90 Minuten; assignee_id ist der Nutzer)
 curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'auftrag: %{http_code}\n' \
-  -d "csrf=$CSRF&customer=Smoke-Test&plate=M-AB%20123&planned=90&template_id=1" "$BASE/orders"
+  -d "csrf=$CSRF&customer=Smoke-Test&plate=M-AB%20123&aw=15&assignee_id=1&template_id=1" "$BASE/orders"
 
 # Aufgabe ohne eigene Zeitangabe
 curl -sSL -b "$JAR" -c "$JAR" -o /dev/null -w 'aufgabe: %{http_code}\n' \
@@ -178,9 +178,9 @@ curl -sS -b "$JAR" "$BASE/orders/1/report.csv" | head -20
 ```
 
 Erwartung: alle Statuscodes `200` (mit `-L` folgt curl den Redirects), CSV
-enthält `Auftrag;Smoke-Test`, `Soll (Minuten);90`, `Ist (Sekunden);…`.
-Die `90` ist das Soll, das beim Anlegen des Auftrags gesetzt wurde; die
-Aufgaben selbst haben keine Zeitangabe mehr.
+enthält `Auftrag;Smoke-Test`, `Soll (Minuten);90`, `Soll (AW);15`,
+`Ist (Sekunden);…`. Die `15 AW` entsprechen `90 Minuten`; die Aufgaben selbst
+haben keine Zeitangabe mehr.
 Ohne `-L` sind die ersten drei Aufrufe `303 See Other` – das ist ebenfalls
 normal, dann wird nur die Zielseite nicht mitgeladen.
 
@@ -188,7 +188,7 @@ normal, dann wird nur die Zielseite nicht mitgeladen.
 
 1. <http://127.0.0.1:8080/login> öffnen
 2. Anmelden mit `admin` / `testpass123`
-3. Unter **Nutzer & Vorlagen** eine Aufgaben-Vorlage anlegen (auch umbenennen/löschen testen), dann einen Auftrag mit Soll in Minuten anlegen und optional mehrere Vorlagen aus dem Dropdown wählen → Timer Start/Pause/Weiter/Ende
+3. Unter **Nutzer & Vorlagen** eine Aufgaben-Vorlage anlegen (auch umbenennen/löschen testen), dann einen Auftrag mit Soll in AW, gewähltem Nutzer und optional mehreren Vorlagen aus dem Dropdown anlegen; neue Aufgaben lassen sich direkt im Dropdown anlegen → Timer Start/Pause/Weiter/Ende
 4. „Auswertung ansehen" und den CSV-Export prüfen
 5. Oben rechts **Konto** (Passwort ändern) und **Nutzer** ( Admin-Seite) testen
 
