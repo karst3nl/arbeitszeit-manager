@@ -10,12 +10,13 @@ Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - Zählerleiste über der Auftragsliste für offene, laufende und abgeschlossene Aufträge; Klick filtert die Liste, Zähler bleiben vollständig und aktualisieren sich alle 30 Sekunden
 - Komplett neue Oberfläche im Stil der Home-Assistant-Finance-App: obere Navigation mit aktivem Bereich, Kartenraster, kompakte Tabellen und helle/dunkle HA-Farbvariablen; PicoCSS und Desktop-Seitenleiste entfallen
 - Startseite nach Rolle: Admins sehen alle offenen und in Bearbeitung befindlichen Aufträge plus Formular zum Anlegen; Nutzer nur die ihnen zugewiesenen Aufträge
-- Aufgaben-Vorlagen im Adminbereich; beim Anlegen eines Auftrags sind mehrere Vorlagen per Mehrfachauswahl wählbar und werden direkt kopiert
+- Aufgaben-Vorlagen im Adminbereich vollständig pflegbar (anlegen, umbenennen, löschen); beim Anlegen eines Auftrags wählt man mehrere Vorlagen aus einem Dropdown und kopiert sie direkt in den Auftrag
 - Responsives Layout: breitere zweispaltige Ansicht am Desktop, auf schmalen Displays stapeln sich die Karten und Tabellen werden zu Karten mit Beschriftungen
 - Auftragstitel wird automatisch aus Kundenname und Kennzeichen gebildet
-- Soll-Zeit ist ausschließlich die Summe der geplanten Minuten aller Aufgaben und passt sich bei Änderungen automatisch an; das separate Soll-Feld entfällt
+- Soll-Zeit wird beim Anlegen des Auftrags vom Ersteller als Gesamtminuten gesetzt; bestehende Aufträge behalten ihre bisherige Soll-Summe durch eine Migration
 
 ### Geändert
+- Aufgaben und Vorlagen haben keine einzelnen Zeitangaben mehr; Soll und Auswertung beziehen sich auf den gesamten Auftrag
 - Große Seitenüberschriften entfernt; Auftrags- und Auswertungstitel bleiben als kompakte Zeile, Navigation und angemeldeter Nutzer stehen in der oberen Leiste
 
 ### Behoben

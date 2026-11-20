@@ -15,24 +15,29 @@
             <label>Kennzeichen
               <input name="plate" required maxlength="40" placeholder="z. B. M-AB 1234">
             </label>
+            <label>Soll (Minuten)
+              <input type="number" name="planned" min="1" max="60000" value="60" required>
+            </label>
             <label>Beschreibung (optional)
               <input name="description" maxlength="500" placeholder="kurz beschreiben">
             </label>
           </div>
-          <fieldset class="template-picker">
-            <legend>Aufgaben auswählen</legend>
-            {{if .TaskTemplates}}
-              {{range .TaskTemplates}}
-                <label class="template-option">
-                  <input type="checkbox" name="template_id" value="{{.ID}}">
-                  <span>{{.Title}} <span class="muted">({{.PlannedMinutes}} min)</span></span>
-                </label>
+          <details class="template-picker">
+            <summary>Aufgaben auswählen <span class="muted">(Mehrfachauswahl)</span></summary>
+            <div class="template-options">
+              {{if .TaskTemplates}}
+                {{range .TaskTemplates}}
+                  <label class="template-option">
+                    <input type="checkbox" name="template_id" value="{{.ID}}">
+                    <span>{{.Title}}</span>
+                  </label>
+                {{end}}
+              {{else}}
+                <p class="muted">Noch keine Aufgaben angelegt. Verwaltung im Adminbereich.</p>
               {{end}}
-            {{else}}
-              <p class="muted">Noch keine Aufgaben-Vorlagen angelegt. Aufgaben können später im Auftrag ergänzt werden.</p>
-            {{end}}
-            <small class="muted">Mehrfachauswahl möglich. Das Soll ergibt sich aus der Summe dieser Aufgaben.</small>
-          </fieldset>
+            </div>
+            <small class="muted">Mehrfachauswahl möglich. Die Liste wird im Adminbereich gepflegt.</small>
+          </details>
           <div class="actions">
             <button type="submit">Auftrag erstellen</button>
           </div>

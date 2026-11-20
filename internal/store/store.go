@@ -376,7 +376,7 @@ const orderSelect = `
 	       o.owner_id, COALESCE(ow.display_name, ''),
 	       o.assignee_id, COALESCE(aw.display_name, ''),
 	       o.timer_state, o.timer_started_at, o.created_at, o.completed_at, o.notes,
-	       COALESCE((SELECT SUM(planned_minutes) FROM tasks WHERE work_order_id = o.id), 0),
+	       o.planned_minutes,
 	       COALESCE((SELECT SUM(COALESCE(end_at, ?) - start_at) FROM time_segments
 	                  WHERE work_order_id = o.id), 0),
 	       EXISTS(SELECT 1 FROM time_segments WHERE work_order_id = o.id AND interrupted = 1)
@@ -423,11 +423,10 @@ func (s *Store) Order(id int64) (*model.Order, error) {
 	return scanOrder(s.db.QueryRow(orderSelect+` WHERE o.id = ?`, time.Now().Unix(), id))
 }
 
-// CreateOrder inserts a new work order. The Soll is always the sum of the
-// planned minutes of the order's tasks; the legacy column stays at 0.
-func (s *Store) CreateOrder(title, description string, ownerID int64) (int64, error) {
+// CreateOrder inserts a new work order with the Soll chosen by its creator.
+func (s *Store) CreateOrder(title, description string, ownerID, plannedMinutes int64) (int64, error) {
 	res, err := s.db.Exec(`INSERT INTO work_orders(title, description, planned_minutes, owner_id, created_at)
-		VALUES(?, ?, 0, ?, ?)`, title, description, ownerID, time.Now().Unix())
+		VALUES(?, ?, ?, ?, ?)`, title, description, plannedMinutes, ownerID, time.Now().Unix())
 	if err != nil {
 		return 0, err
 	}
@@ -469,7 +468,7 @@ func (s *Store) DeleteOrder(orderID int64) error {
 
 // Tasks returns the tasks of an order in their configured order.
 func (s *Store) Tasks(orderID int64) ([]model.Task, error) {
-	rows, err := s.db.Query(`SELECT id, work_order_id, title, planned_minutes, position, done
+	rows, err := s.db.Query(`SELECT id, work_order_id, title, position, done
 		FROM tasks WHERE work_order_id = ? ORDER BY position, id`, orderID)
 	if err != nil {
 		return nil, err
@@ -479,7 +478,7 @@ func (s *Store) Tasks(orderID int64) ([]model.Task, error) {
 	var tasks []model.Task
 	for rows.Next() {
 		var t model.Task
-		if err := rows.Scan(&t.ID, &t.OrderID, &t.Title, &t.PlannedMinutes, &t.Position, &t.Done); err != nil {
+		if err := rows.Scan(&t.ID, &t.OrderID, &t.Title, &t.Position, &t.Done); err != nil {
 			return nil, err
 		}
 		tasks = append(tasks, t)
@@ -498,22 +497,22 @@ func (s *Store) TaskInOrder(orderID, taskID int64) (bool, error) {
 }
 
 // AddTask appends a task to an order.
-func (s *Store) AddTask(orderID int64, title string, plannedMinutes int64) error {
+func (s *Store) AddTask(orderID int64, title string) error {
 	var next int
 	if err := s.db.QueryRow(`SELECT COALESCE(MAX(position), -1) + 1 FROM tasks WHERE work_order_id = ?`, orderID).Scan(&next); err != nil {
 		return err
 	}
-	_, err := s.db.Exec(`INSERT INTO tasks(work_order_id, title, planned_minutes, position) VALUES(?, ?, ?, ?)`,
-		orderID, title, plannedMinutes, next)
+	_, err := s.db.Exec(`INSERT INTO tasks(work_order_id, title, position) VALUES(?, ?, ?)`,
+		orderID, title, next)
 	return err
 }
 
-// UpdateTask changes title, planned minutes and done flag of a task. The
-// work order ID is part of the WHERE clause so a task cannot be modified
-// through a different order's URL.
-func (s *Store) UpdateTask(orderID, id int64, title string, plannedMinutes int64, done bool) error {
-	res, err := s.db.Exec(`UPDATE tasks SET title = ?, planned_minutes = ?, done = ?
-		WHERE id = ? AND work_order_id = ?`, title, plannedMinutes, done, id, orderID)
+// UpdateTask changes title and done flag of a task. The work order ID is part
+// of the WHERE clause so a task cannot be modified through a different order's
+// URL.
+func (s *Store) UpdateTask(orderID, id int64, title string, done bool) error {
+	res, err := s.db.Exec(`UPDATE tasks SET title = ?, done = ?
+		WHERE id = ? AND work_order_id = ?`, title, done, id, orderID)
 	if err != nil {
 		return err
 	}
@@ -541,7 +540,7 @@ func (s *Store) DeleteTask(orderID, id int64) error {
 
 // TaskTemplates returns the admin-maintained templates for the order form.
 func (s *Store) TaskTemplates() ([]model.TaskTemplate, error) {
-	rows, err := s.db.Query(`SELECT id, title, planned_minutes, created_at
+	rows, err := s.db.Query(`SELECT id, title, created_at
 		FROM task_templates ORDER BY title COLLATE NOCASE, id`)
 	if err != nil {
 		return nil, err
@@ -551,7 +550,7 @@ func (s *Store) TaskTemplates() ([]model.TaskTemplate, error) {
 	var templates []model.TaskTemplate
 	for rows.Next() {
 		var t model.TaskTemplate
-		if err := rows.Scan(&t.ID, &t.Title, &t.PlannedMinutes, &t.CreatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.Title, &t.CreatedAt); err != nil {
 			return nil, err
 		}
 		templates = append(templates, t)
@@ -560,14 +559,27 @@ func (s *Store) TaskTemplates() ([]model.TaskTemplate, error) {
 }
 
 // CreateTaskTemplate adds a reusable task. Titles are unique to keep the
-// dropdown readable.
-func (s *Store) CreateTaskTemplate(title string, plannedMinutes int64) (int64, error) {
-	res, err := s.db.Exec(`INSERT INTO task_templates(title, planned_minutes, created_at) VALUES(?, ?, ?)`,
-		title, plannedMinutes, time.Now().Unix())
+// dropdown readable. The legacy planned_minutes column stays at its default.
+func (s *Store) CreateTaskTemplate(title string) (int64, error) {
+	res, err := s.db.Exec(`INSERT INTO task_templates(title, created_at) VALUES(?, ?)`,
+		title, time.Now().Unix())
 	if err != nil {
 		return 0, err
 	}
 	return res.LastInsertId()
+}
+
+// UpdateTaskTemplate renames a template. Existing orders keep their own copy
+// of the task title.
+func (s *Store) UpdateTaskTemplate(id int64, title string) error {
+	res, err := s.db.Exec(`UPDATE task_templates SET title = ? WHERE id = ?`, title, id)
+	if err != nil {
+		return err
+	}
+	if !changed(res) {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // DeleteTaskTemplate removes a template. Existing orders are unaffected
@@ -587,7 +599,7 @@ func (s *Store) DeleteTaskTemplate(id int64) error {
 // CreateOrderFromTemplates creates an order and copies every selected task
 // template into it in one transaction. A missing template aborts the whole
 // operation, so no half-created order is left behind.
-func (s *Store) CreateOrderFromTemplates(title, description string, ownerID int64, templateIDs []int64) (int64, error) {
+func (s *Store) CreateOrderFromTemplates(title, description string, ownerID, plannedMinutes int64, templateIDs []int64) (int64, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return 0, err
@@ -599,8 +611,8 @@ func (s *Store) CreateOrderFromTemplates(title, description string, ownerID int6
 	tasks := make([]model.TaskTemplate, 0, len(templateIDs))
 	for _, id := range templateIDs {
 		var t model.TaskTemplate
-		err := tx.QueryRow(`SELECT id, title, planned_minutes FROM task_templates WHERE id = ?`, id).
-			Scan(&t.ID, &t.Title, &t.PlannedMinutes)
+		err := tx.QueryRow(`SELECT id, title FROM task_templates WHERE id = ?`, id).
+			Scan(&t.ID, &t.Title)
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, ErrNotFound
 		}
@@ -611,7 +623,7 @@ func (s *Store) CreateOrderFromTemplates(title, description string, ownerID int6
 	}
 
 	res, err := tx.Exec(`INSERT INTO work_orders(title, description, planned_minutes, owner_id, created_at)
-		VALUES(?, ?, 0, ?, ?)`, title, description, ownerID, time.Now().Unix())
+		VALUES(?, ?, ?, ?, ?)`, title, description, plannedMinutes, ownerID, time.Now().Unix())
 	if err != nil {
 		return 0, err
 	}
@@ -620,8 +632,8 @@ func (s *Store) CreateOrderFromTemplates(title, description string, ownerID int6
 		return 0, err
 	}
 	for position, t := range tasks {
-		if _, err := tx.Exec(`INSERT INTO tasks(work_order_id, title, planned_minutes, position)
-			VALUES(?, ?, ?, ?)`, orderID, t.Title, t.PlannedMinutes, position); err != nil {
+		if _, err := tx.Exec(`INSERT INTO tasks(work_order_id, title, position)
+			VALUES(?, ?, ?)`, orderID, t.Title, position); err != nil {
 			return 0, err
 		}
 	}
@@ -783,7 +795,7 @@ func buildReport(ctx context.Context, q queryer, orderID, now int64) (*model.Rep
 	var r model.Report
 	var completedAt int64
 	err := q.QueryRow(`SELECT id, title, notes,
-		COALESCE((SELECT SUM(planned_minutes) FROM tasks WHERE work_order_id = work_orders.id), 0),
+		planned_minutes,
 		COALESCE((SELECT SUM(COALESCE(end_at, ?) - start_at) FROM time_segments
 		          WHERE work_order_id = work_orders.id), 0),
 		COALESCE(completed_at, 0)
@@ -806,7 +818,7 @@ func buildReport(ctx context.Context, q queryer, orderID, now int64) (*model.Rep
 		r.Summary = fmt.Sprintf("Ist-Zeit liegt %s unter dem Soll.", timer.Duration(-r.DeviationSeconds))
 	}
 
-	rows, err := q.QueryContext(ctx, `SELECT id, work_order_id, title, planned_minutes, position, done
+	rows, err := q.QueryContext(ctx, `SELECT id, work_order_id, title, position, done
 		FROM tasks WHERE work_order_id = ? ORDER BY position, id`, orderID)
 	if err != nil {
 		return nil, err
@@ -814,7 +826,7 @@ func buildReport(ctx context.Context, q queryer, orderID, now int64) (*model.Rep
 	defer rows.Close()
 	for rows.Next() {
 		var t model.Task
-		if err := rows.Scan(&t.ID, &t.OrderID, &t.Title, &t.PlannedMinutes, &t.Position, &t.Done); err != nil {
+		if err := rows.Scan(&t.ID, &t.OrderID, &t.Title, &t.Position, &t.Done); err != nil {
 			return nil, err
 		}
 		r.Tasks = append(r.Tasks, t)

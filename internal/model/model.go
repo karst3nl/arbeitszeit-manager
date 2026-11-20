@@ -35,8 +35,7 @@ type Order struct {
 	CreatedAt      int64
 	CompletedAt    int64
 	Notes          string
-	// PlannedMinutes is the Soll used for the evaluation: the sum of the
-	// planned minutes of all tasks in this order.
+	// PlannedMinutes is the Soll for the whole order, set by its creator.
 	PlannedMinutes int64
 	ActualSeconds  int64
 	Interrupted    bool
@@ -61,23 +60,22 @@ func (o *Order) DeltaPercent() float64 {
 	return float64(o.DeltaSeconds()) / float64(o.PlannedMinutes*60) * 100
 }
 
-// Task is one planned activity inside an order.
+// Task is one activity inside an order. Tasks have no individual time; the
+// Soll is set for the whole order.
 type Task struct {
-	ID             int64
-	OrderID        int64
-	Title          string
-	PlannedMinutes int64
-	Position       int
-	Done           bool
+	ID       int64
+	OrderID  int64
+	Title    string
+	Position int
+	Done     bool
 }
 
 // TaskTemplate is a reusable task maintained by an admin. Selecting one when
 // creating an order adds a copy to that order.
 type TaskTemplate struct {
-	ID             int64
-	Title          string
-	PlannedMinutes int64
-	CreatedAt      int64
+	ID        int64
+	Title     string
+	CreatedAt int64
 }
 
 // Report is the result of an order evaluation.

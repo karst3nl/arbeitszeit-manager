@@ -8,9 +8,9 @@ Schlanke Webapp für Arbeitsaufträge mit geplanten Zeiten, einem Timer für die
 
 ## Funktionen
 
-- **Arbeitsaufträge** mit Titel aus Kundenname und Kennzeichen, Beschreibung und beliebigen Aufgaben mit geplanten Minuten
-- **Soll-Zeit** ist immer die Summe der geplanten Aufgabenzeiten; Ändern einer Aufgabe passt das Soll automatisch an
-- **Aufgaben-Vorlagen**: Admins legen wiederverwendbare Aufgaben mit Minuten an; beim Anlegen eines Auftrags sind mehrere Vorlagen per Mehrfachauswahl wählbar und werden direkt kopiert
+- **Arbeitsaufträge** mit Titel aus Kundenname und Kennzeichen, Beschreibung und beliebigen Aufgaben ohne einzelne Zeitangaben
+- **Soll-Zeit** wird vom Ersteller beim Anlegen des Auftrags in Minuten gesetzt und gilt für den gesamten Auftrag
+- **Aufgaben-Vorlagen**: Admins legen die Liste im Adminbereich an, benennen sie um und löschen sie; beim Anlegen eines Auftrags sind mehrere Vorlagen per Dropdown-Mehrfachauswahl wählbar und werden direkt kopiert
 - **Ein Timer pro Auftrag**: Start → Pause → Weiter → Ende, beliebig viele Pausen
 - **Live-Anzeige** der Ist-Zeit mit sekündlichem Browser-Tick und 30-Sekunden-Server-Sync
 - **Auswertung** nach Abschluss: Soll, Ist und Abweichung in Minuten und Prozent, Balkenvergleich, Notiz und CSV-Export

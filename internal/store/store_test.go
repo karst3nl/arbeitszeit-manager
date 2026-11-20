@@ -26,62 +26,61 @@ func testStore(t *testing.T) *Store {
 
 func setupOrder(t *testing.T, s *Store) int64 {
 	t.Helper()
-	id, err := s.CreateOrder("Testauftrag", "Beschreibung", 1)
+	id, err := s.CreateOrder("Testauftrag", "Beschreibung", 1, 180)
 	if err != nil {
 		t.Fatalf("create order: %v", err)
 	}
-	if err := s.AddTask(id, "Konzeption", 60); err != nil {
+	if err := s.AddTask(id, "Konzeption"); err != nil {
 		t.Fatalf("add task 1: %v", err)
 	}
-	if err := s.AddTask(id, "Umsetzung", 120); err != nil {
+	if err := s.AddTask(id, "Umsetzung"); err != nil {
 		t.Fatalf("add task 2: %v", err)
 	}
 	return id
 }
 
-func TestOrderSollFromTaskMinutes(t *testing.T) {
+func TestOrderSollIsExplicit(t *testing.T) {
 	s := testStore(t)
 	id := setupOrder(t, s)
 
 	o, err := s.Order(id)
 	if err != nil || o.PlannedMinutes != 180 {
-		t.Fatalf("Soll from tasks: %+v, %v", o, err)
+		t.Fatalf("explicit Soll: %+v, %v", o, err)
 	}
 	rep, err := s.Report(id)
 	if err != nil || rep.PlannedMinutes != 180 {
 		t.Fatalf("report Soll: %+v, %v", rep, err)
 	}
 
-	// Old databases may still hold an explicit Soll. It must be ignored:
-	// the planned task minutes are now the only source of truth.
-	if _, err := s.db.Exec(`UPDATE work_orders SET planned_minutes = 90 WHERE id = ?`, id); err != nil {
+	// Tasks no longer carry times: adding one must not change the Soll.
+	if err := s.AddTask(id, "Prüfung"); err != nil {
 		t.Fatal(err)
 	}
 	o, err = s.Order(id)
 	if err != nil || o.PlannedMinutes != 180 {
-		t.Fatalf("legacy Soll was used: %+v, %v", o, err)
-	}
-	rep, err = s.Report(id)
-	if err != nil || rep.PlannedMinutes != 180 {
-		t.Fatalf("legacy Soll in report: %+v, %v", rep, err)
+		t.Fatalf("Soll changed after adding a task: %+v, %v", o, err)
 	}
 
-	if err := s.AddTask(id, "Prüfung", 20); err != nil {
+	if _, err := s.db.Exec(`UPDATE work_orders SET planned_minutes = 90 WHERE id = ?`, id); err != nil {
 		t.Fatal(err)
 	}
 	o, err = s.Order(id)
-	if err != nil || o.PlannedMinutes != 200 {
-		t.Fatalf("Soll after adding a task: %+v, %v", o, err)
+	if err != nil || o.PlannedMinutes != 90 {
+		t.Fatalf("updated Soll not used: %+v, %v", o, err)
+	}
+	rep, err = s.Report(id)
+	if err != nil || rep.PlannedMinutes != 90 {
+		t.Fatalf("updated Soll missing in report: %+v, %v", rep, err)
 	}
 }
 
 func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 	s := testStore(t)
-	templateID, err := s.CreateTaskTemplate("Konzeption", 60)
+	templateID, err := s.CreateTaskTemplate("Konzeption")
 	if err != nil {
 		t.Fatal(err)
 	}
-	secondID, err := s.CreateTaskTemplate("Umsetzung", 120)
+	secondID, err := s.CreateTaskTemplate("Umsetzung")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,11 +88,11 @@ func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 	if err != nil || len(templates) != 2 {
 		t.Fatalf("templates: %d, %v", len(templates), err)
 	}
-	if templates[0].Title != "Konzeption" || templates[0].PlannedMinutes != 60 {
+	if templates[0].Title != "Konzeption" {
 		t.Fatalf("unexpected template: %+v", templates[0])
 	}
 
-	orderID, err := s.CreateOrderFromTemplates("Kunde", "", 1, []int64{templateID, secondID})
+	orderID, err := s.CreateOrderFromTemplates("Kunde", "", 1, 180, []int64{templateID, secondID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,8 +100,7 @@ func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 	if err != nil || len(tasks) != 2 {
 		t.Fatalf("copied tasks: %d, %v", len(tasks), err)
 	}
-	if tasks[0].Title != "Konzeption" || tasks[0].PlannedMinutes != 60 ||
-		tasks[1].Title != "Umsetzung" || tasks[1].PlannedMinutes != 120 {
+	if tasks[0].Title != "Konzeption" || tasks[1].Title != "Umsetzung" {
 		t.Fatalf("unexpected copied tasks: %+v", tasks)
 	}
 	o, err := s.Order(orderID)
@@ -114,7 +112,7 @@ func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.CreateOrderFromTemplates("Fehler", "", 1, []int64{templateID, 999}); !errors.Is(err, ErrNotFound) {
+	if _, err := s.CreateOrderFromTemplates("Fehler", "", 1, 60, []int64{templateID, 999}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("missing template: %v", err)
 	}
 	after, err := s.Orders()
@@ -132,6 +130,17 @@ func TestTaskTemplatesAndOrderCreation(t *testing.T) {
 	tasks, err = s.Tasks(orderID)
 	if err != nil || len(tasks) != 2 {
 		t.Fatalf("copied tasks should survive template deletion: %d, %v", len(tasks), err)
+	}
+
+	if err := s.UpdateTaskTemplate(secondID, "Umsetzung neu"); err != nil {
+		t.Fatalf("rename template: %v", err)
+	}
+	templates, err = s.TaskTemplates()
+	if err != nil || len(templates) != 1 || templates[0].Title != "Umsetzung neu" {
+		t.Fatalf("renamed template missing: %+v, %v", templates, err)
+	}
+	if err := s.UpdateTaskTemplate(999, "Gibt es nicht"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("renaming a missing template: %v", err)
 	}
 }
 

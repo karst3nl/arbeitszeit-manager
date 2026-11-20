@@ -41,10 +41,10 @@
       <h2>Geplante Aufgaben</h2>
       {{if .Report.Tasks}}
         <table>
-          <thead><tr><th>Aufgabe</th><th>Geplant</th></tr></thead>
+          <thead><tr><th>Aufgabe</th></tr></thead>
           <tbody>
             {{range .Report.Tasks}}
-              <tr><td data-label="Aufgabe">{{.Title}}</td><td data-label="Geplant">{{minutes .PlannedMinutes}}</td></tr>
+              <tr><td data-label="Aufgabe">{{.Title}}</td></tr>
             {{end}}
           </tbody>
         </table>

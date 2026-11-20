@@ -174,13 +174,39 @@ input, select, textarea {
 textarea { resize: vertical; }
 label.checkbox { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 14px; }
 label.checkbox input { width: auto; }
-.template-picker {
-  margin: 12px 0;
-  padding: 10px 12px;
+.template-picker { position: relative; margin: 12px 0; }
+.template-picker > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  list-style: none;
 }
-.template-picker legend { padding: 0 .3rem; font-size: 12px; color: var(--muted); }
+.template-picker > summary::-webkit-details-marker { display: none; }
+.template-picker > summary::after { content: "▾"; color: var(--muted); }
+.template-picker[open] > summary { border-radius: 8px 8px 0 0; }
+.template-picker[open] > summary::after { content: "▴"; }
+.template-options {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+  background: var(--card);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .18);
+}
 .template-option {
   display: flex;
   align-items: center;
@@ -308,7 +334,7 @@ details.order-group > .cards, details.order-group > .empty-hint { margin-top: 12
 .task-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .task-form {
   display: grid;
-  grid-template-columns: auto minmax(140px, 1fr) 100px auto;
+  grid-template-columns: auto minmax(140px, 1fr) auto;
   gap: 8px;
   align-items: center;
   flex: 1 1 420px;
@@ -412,7 +438,7 @@ details.order-group > .cards, details.order-group > .empty-hint { margin-top: 12
   .summary-chip { min-height: 44px; }
   .order-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .summary-chip { justify-content: center; }
-  .task-form { grid-template-columns: auto 1fr 80px; }
+  .task-form { grid-template-columns: auto 1fr; }
   .task-form button { grid-column: 1 / -1; }
   .timer-actions form { flex: 1 1 100%; }
   .timer-actions button, .timer-actions .button { width: 100%; }

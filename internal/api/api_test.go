@@ -155,16 +155,17 @@ func TestFullOrderLifecycle(t *testing.T) {
 
 	body := post(t, client, base+"/orders", url.Values{
 		"csrf": {csrf}, "customer": {"Kunde Muster"}, "plate": {"M-AB 123"}, "description": {"Relaunch"},
+		"planned": {"120"},
 	})
 	if !strings.Contains(body, "Kunde Muster") {
 		t.Fatalf("order page missing title: %s", body)
 	}
 
 	body = post(t, client, base+"/orders/1/tasks", url.Values{
-		"csrf": {csrf}, "title": {"Konzeption"}, "planned": {"60"},
+		"csrf": {csrf}, "title": {"Konzeption"},
 	})
-	if !strings.Contains(body, "Konzeption") {
-		t.Fatalf("task missing on order page: %s", body)
+	if !strings.Contains(body, "Konzeption") || strings.Contains(body, "Geplante Minuten") {
+		t.Fatalf("task missing on order page or still timed: %s", body)
 	}
 
 	body = post(t, client, base+"/orders/1/timer/start", url.Values{"csrf": {csrf}})
@@ -213,9 +214,9 @@ func TestDashboardIsRoleSpecific(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
 
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Offener Auftrag"}, "plate": {"M-AB 1"}})
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Mia Auftrag"}, "plate": {"M-AB 2"}})
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Admin Auftrag"}, "plate": {"M-AB 3"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Offener Auftrag"}, "plate": {"M-AB 1"}, "planned": {"60"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Mia Auftrag"}, "plate": {"M-AB 2"}, "planned": {"60"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Admin Auftrag"}, "plate": {"M-AB 3"}, "planned": {"60"}})
 	post(t, client, base+"/orders/2/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"2"}})
 	post(t, client, base+"/orders/3/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"1"}})
 
@@ -256,9 +257,9 @@ func TestOrderSummaryCountersAndFilter(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
 
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Offen Nr.1"}, "plate": {"M-AB 1"}})
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Laufend Nr.2"}, "plate": {"M-AB 2"}})
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Fertig Nr.3"}, "plate": {"M-AB 3"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Offen Nr.1"}, "plate": {"M-AB 1"}, "planned": {"60"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Laufend Nr.2"}, "plate": {"M-AB 2"}, "planned": {"60"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Fertig Nr.3"}, "plate": {"M-AB 3"}, "planned": {"60"}})
 	post(t, client, base+"/orders/2/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"2"}})
 	post(t, client, base+"/orders/3/assignee", url.Values{"csrf": {csrf}, "assignee_id": {"2"}})
 	post(t, client, base+"/orders/2/timer/start", url.Values{"csrf": {csrf}})
@@ -328,10 +329,10 @@ func TestAdminTaskTemplatesAndOrderCreation(t *testing.T) {
 	}
 
 	post(t, client, base+"/admin/task-templates", url.Values{
-		"csrf": {csrf}, "title": {"Konzeption"}, "planned": {"60"},
+		"csrf": {csrf}, "title": {"Konzeption"},
 	})
 	post(t, client, base+"/admin/task-templates", url.Values{
-		"csrf": {csrf}, "title": {"Umsetzung"}, "planned": {"120"},
+		"csrf": {csrf}, "title": {"Umsetzung"},
 	})
 	body = get(t, client, base+"/")
 	if !strings.Contains(body, `name="template_id" value="1"`) ||
@@ -339,10 +340,10 @@ func TestAdminTaskTemplatesAndOrderCreation(t *testing.T) {
 		t.Fatalf("templates missing in multi-select: %s", body)
 	}
 
-	// A stale "planned" field must not override the task sum.
+	// The creator sets the Soll; templates only supply task names.
 	body = post(t, client, base+"/orders", url.Values{
 		"csrf": {csrf}, "customer": {"Muster GmbH"}, "plate": {"M-AB 1234"},
-		"planned": {"999"}, "template_id": {"1", "2"},
+		"planned": {"180"}, "template_id": {"1", "2"},
 	})
 	for _, want := range []string{"Muster GmbH · M-AB 1234", "Konzeption", "Umsetzung", "3 h 0 min"} {
 		if !strings.Contains(body, want) {
@@ -352,9 +353,26 @@ func TestAdminTaskTemplatesAndOrderCreation(t *testing.T) {
 
 	mia, miaCSRF := loginAs(t, base, "mia")
 	if got := postStatus(t, mia, base+"/admin/task-templates", url.Values{
-		"csrf": {miaCSRF}, "title": {"Schmuggel"}, "planned": {"5"},
+		"csrf": {miaCSRF}, "title": {"Schmuggel"},
 	}); got != http.StatusForbidden {
 		t.Fatalf("non-admin created a template: %d", got)
+	}
+	if got := postStatus(t, mia, base+"/admin/task-templates/1", url.Values{
+		"csrf": {miaCSRF}, "title": {"Schmuggel"},
+	}); got != http.StatusForbidden {
+		t.Fatalf("non-admin renamed a template: %d", got)
+	}
+
+	body = post(t, client, base+"/admin/task-templates/1", url.Values{
+		"csrf": {csrf}, "title": {"Konzeption neu"},
+	})
+	if !strings.Contains(body, "Konzeption neu") || strings.Contains(body, `value="Konzeption"`) {
+		t.Fatalf("template rename failed: %s", body)
+	}
+	body = get(t, client, base+"/")
+	if !strings.Contains(body, `name="template_id" value="1"`) ||
+		!strings.Contains(body, "Konzeption neu") || strings.Contains(body, ">Konzeption<") {
+		t.Fatalf("renamed template missing in dropdown: %s", body)
 	}
 	if got := postStatus(t, mia, base+"/admin/task-templates/1/delete", url.Values{
 		"csrf": {miaCSRF},
@@ -381,7 +399,7 @@ func TestUserCanClaimUnassignedOrder(t *testing.T) {
 	base := ts.URL
 
 	post(t, client, base+"/orders", url.Values{
-		"csrf": {csrf}, "customer": {"Freier Auftrag"}, "plate": {"M-AB 4"},
+		"csrf": {csrf}, "customer": {"Freier Auftrag"}, "plate": {"M-AB 4"}, "planned": {"60"},
 	})
 
 	mia, miaCSRF := loginAs(t, base, "mia")
@@ -428,9 +446,9 @@ func TestPasswordChangeAndAdminReset(t *testing.T) {
 func TestCSVFormulaInjectionIsNeutralised(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"=1+1"}, "plate": {"M-AB 5"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"=1+1"}, "plate": {"M-AB 5"}, "planned": {"60"}})
 	post(t, client, base+"/orders/1/tasks", url.Values{
-		"csrf": {csrf}, "title": {"=SUM(A1)"}, "planned": {"10"},
+		"csrf": {csrf}, "title": {"=SUM(A1)"},
 	})
 	post(t, client, base+"/orders/1/timer/start", url.Values{"csrf": {csrf}})
 	post(t, client, base+"/orders/1/timer/stop", url.Values{"csrf": {csrf}})
@@ -444,7 +462,7 @@ func TestCSVFormulaInjectionIsNeutralised(t *testing.T) {
 func TestDeleteOrder(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Wegwerfauftrag"}, "plate": {"M-AB 6"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Wegwerfauftrag"}, "plate": {"M-AB 6"}, "planned": {"60"}})
 
 	body := post(t, client, base+"/orders/1/delete", url.Values{"csrf": {csrf}})
 	if !strings.Contains(body, "Arbeitsaufträge") {
@@ -458,14 +476,14 @@ func TestDeleteOrder(t *testing.T) {
 func TestTaskCannotBeChangedThroughAnotherOrder(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Auftrag A"}, "plate": {"M-AB 7"}})
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Auftrag B"}, "plate": {"M-AB 8"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Auftrag A"}, "plate": {"M-AB 7"}, "planned": {"60"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Auftrag B"}, "plate": {"M-AB 8"}, "planned": {"60"}})
 	post(t, client, base+"/orders/2/tasks", url.Values{
-		"csrf": {csrf}, "title": {"Geheim"}, "planned": {"10"},
+		"csrf": {csrf}, "title": {"Geheim"},
 	})
 
 	if got := postStatus(t, client, base+"/orders/1/tasks/1", url.Values{
-		"csrf": {csrf}, "title": {"Überschrieben"}, "planned": {"99"},
+		"csrf": {csrf}, "title": {"Überschrieben"},
 	}); got != http.StatusNotFound {
 		t.Fatalf("cross-order task update returned %d, want 404", got)
 	}
@@ -483,27 +501,27 @@ func TestTaskCannotBeChangedThroughAnotherOrder(t *testing.T) {
 func TestCompletedOrderTasksAreLocked(t *testing.T) {
 	ts, client, csrf := setup(t)
 	base := ts.URL
-	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Fertig"}, "plate": {"M-AB 9"}})
+	post(t, client, base+"/orders", url.Values{"csrf": {csrf}, "customer": {"Fertig"}, "plate": {"M-AB 9"}, "planned": {"60"}})
 	post(t, client, base+"/orders/1/tasks", url.Values{
-		"csrf": {csrf}, "title": {"Konzeption"}, "planned": {"60"},
+		"csrf": {csrf}, "title": {"Konzeption"},
 	})
 	post(t, client, base+"/orders/1/timer/start", url.Values{"csrf": {csrf}})
 	post(t, client, base+"/orders/1/timer/stop", url.Values{"csrf": {csrf}})
 
 	if got := postStatus(t, client, base+"/orders/1/tasks", url.Values{
-		"csrf": {csrf}, "title": {"Zu spät"}, "planned": {"5"},
+		"csrf": {csrf}, "title": {"Zu spät"},
 	}); got != http.StatusConflict {
 		t.Fatalf("task add on done order returned %d, want 409", got)
 	}
 	if got := postStatus(t, client, base+"/orders/1/tasks/1", url.Values{
-		"csrf": {csrf}, "title": {"Zu spät"}, "planned": {"5"},
+		"csrf": {csrf}, "title": {"Zu spät"},
 	}); got != http.StatusConflict {
 		t.Fatalf("task update on done order returned %d, want 409", got)
 	}
 
 	post(t, client, base+"/orders/1/timer/reopen", url.Values{"csrf": {csrf}})
 	body := post(t, client, base+"/orders/1/tasks", url.Values{
-		"csrf": {csrf}, "title": {"Nachtrag"}, "planned": {"5"},
+		"csrf": {csrf}, "title": {"Nachtrag"},
 	})
 	if !strings.Contains(body, "Nachtrag") {
 		t.Fatal("task could not be added after reopening the order")

@@ -36,32 +36,38 @@
       <p class="muted">Stehen beim Anlegen eines Auftrags zur Auswahl.</p>
       <form method="post" action="/admin/task-templates">
         {{template "csrf" .}}
-        <div class="form-grid compact">
-          <label>Bezeichnung
-            <input name="title" required maxlength="200" placeholder="z. B. Konzeption">
-          </label>
-          <label>Geplante Minuten
-            <input type="number" name="planned" min="0" max="60000" value="30" required>
-          </label>
-        </div>
+        <label>Bezeichnung
+          <input name="title" required maxlength="200" placeholder="z. B. Konzeption">
+        </label>
         <div class="actions">
           <button type="submit" class="secondary">Vorlage anlegen</button>
         </div>
       </form>
       {{if .TaskTemplates}}
         <table>
-          <thead><tr><th>Aufgabe</th><th>Min.</th><th></th></tr></thead>
+          <thead><tr><th>Aufgabe</th><th></th></tr></thead>
           <tbody>
             {{range .TaskTemplates}}
               <tr>
                 <td data-label="Aufgabe">{{.Title}}</td>
-                <td data-label="Min.">{{.PlannedMinutes}}</td>
                 <td class="actions-cell">
-                  <form method="post" action="/admin/task-templates/{{.ID}}/delete" class="inline table-actions"
-                        onsubmit="return confirm('Vorlage wirklich löschen?');">
-                    {{template "csrf" $}}
-                    <button type="submit" class="danger">Löschen</button>
-                  </form>
+                  <div class="table-actions">
+                    <details>
+                      <summary>Umbenennen</summary>
+                      <form method="post" action="/admin/task-templates/{{.ID}}">
+                        {{template "csrf" $}}
+                        <input name="title" value="{{.Title}}" required maxlength="200" aria-label="Neue Bezeichnung">
+                        <div class="actions">
+                          <button type="submit" class="secondary">Speichern</button>
+                        </div>
+                      </form>
+                    </details>
+                    <form method="post" action="/admin/task-templates/{{.ID}}/delete" class="inline"
+                          onsubmit="return confirm('Vorlage wirklich löschen?');">
+                      {{template "csrf" $}}
+                      <button type="submit" class="danger">Löschen</button>
+                    </form>
+                  </div>
                 </td>
               </tr>
             {{end}}

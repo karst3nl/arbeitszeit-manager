@@ -24,9 +24,9 @@
       <h2>Soll-Zeit</h2>
       <p>
         Aktuelles Soll: <strong>{{minutes .Order.PlannedMinutes}}</strong>
-        <span class="muted">(Summe der geplanten Aufgabenzeiten)</span>
+        <span class="muted">(vom Ersteller beim Anlegen festgelegt)</span>
       </p>
-      <p class="muted">Das Soll passt sich automatisch an, wenn Aufgaben ergänzt oder ihre Minuten geändert werden.</p>
+      <p class="muted">Die Aufgaben selbst haben keine Zeitangabe; das Soll gilt für den gesamten Auftrag.</p>
     </article>
 
     <article class="card">
@@ -41,7 +41,6 @@
                   <input type="checkbox" name="done" {{if .Done}}checked{{end}} aria-label="Erledigt">
                 </label>
                 <input name="title" value="{{.Title}}" maxlength="200" aria-label="Aufgabe">
-                <input type="number" name="planned" min="0" max="60000" value="{{.PlannedMinutes}}" aria-label="Geplante Minuten">
                 <button type="submit" class="secondary">Speichern</button>
               </form>
               <form method="post" action="/orders/{{$.Order.ID}}/tasks/{{.ID}}/delete" class="inline">
@@ -57,14 +56,9 @@
 
       <form method="post" action="/orders/{{.Order.ID}}/tasks">
         {{template "csrf" .}}
-        <div class="form-grid compact">
-          <label>Neue Aufgabe
-            <input name="title" required maxlength="200" placeholder="was ist zu tun?">
-          </label>
-          <label>Geplante Minuten
-            <input type="number" name="planned" min="0" max="60000" value="30" required>
-          </label>
-        </div>
+        <label>Neue Aufgabe
+          <input name="title" required maxlength="200" placeholder="was ist zu tun?">
+        </label>
         <div class="actions">
           <button type="submit">Hinzufügen</button>
         </div>

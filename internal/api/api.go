@@ -63,7 +63,6 @@ type pageData struct {
 	CountDone     int
 	Order         *model.Order
 	Tasks         []model.Task
-	TaskMinutes   int64
 	TaskTemplates []model.TaskTemplate
 	Users         []model.User
 	Report        *model.Report
@@ -149,6 +148,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /admin/users/{id}/active", s.auth.RequireAdmin(http.HandlerFunc(s.setUserActive)))
 	mux.Handle("POST /admin/users/{id}/password", s.auth.RequireAdmin(http.HandlerFunc(s.resetPassword)))
 	mux.Handle("POST /admin/task-templates", s.auth.RequireAdmin(http.HandlerFunc(s.createTaskTemplate)))
+	mux.Handle("POST /admin/task-templates/{id}", s.auth.RequireAdmin(http.HandlerFunc(s.updateTaskTemplate)))
 	mux.Handle("POST /admin/task-templates/{id}/delete", s.auth.RequireAdmin(http.HandlerFunc(s.deleteTaskTemplate)))
 
 	return s.securityHeaders(s.auth.Middleware(mux))
@@ -519,6 +519,11 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, http.StatusBadRequest, "Ungültige Formulardaten")
 		return
 	}
+	planned, err := strconv.ParseInt(strings.TrimSpace(r.FormValue("planned")), 10, 64)
+	if err != nil || planned < 1 || planned > 60000 {
+		http.Redirect(w, r, "/?err=Soll+zwischen+1+und+60000+Minuten+angeben.", http.StatusSeeOther)
+		return
+	}
 	var templateIDs []int64
 	seen := make(map[int64]bool)
 	for _, value := range r.Form["template_id"] {
@@ -531,12 +536,11 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var id int64
-	var err error
 	if len(templateIDs) > 0 {
 		id, err = s.store.CreateOrderFromTemplates(title, r.FormValue("description"),
-			auth.UserFrom(r).ID, templateIDs)
+			auth.UserFrom(r).ID, planned, templateIDs)
 	} else {
-		id, err = s.store.CreateOrder(title, r.FormValue("description"), auth.UserFrom(r).ID)
+		id, err = s.store.CreateOrder(title, r.FormValue("description"), auth.UserFrom(r).ID, planned)
 	}
 	if errors.Is(err, store.ErrNotFound) {
 		http.Redirect(w, r, "/?err=Ausgew%C3%A4hlte+Aufgabe+nicht+mehr+vorhanden.", http.StatusSeeOther)
@@ -583,9 +587,6 @@ func (s *Server) orderPage(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Title = o.Title
 	data.Tasks = tasks
-	for _, task := range tasks {
-		data.TaskMinutes += task.PlannedMinutes
-	}
 	data.Users = users
 	s.render(w, "order.html", data)
 }
@@ -745,12 +746,11 @@ func (s *Server) addTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	title := r.FormValue("title")
-	planned, _ := strconv.ParseInt(r.FormValue("planned"), 10, 64)
-	if title == "" || planned < 0 {
+	if title == "" {
 		http.Redirect(w, r, fmt.Sprintf("/orders/%d?err=Ung%%C3%%BCltige+Aufgabe.", id), http.StatusSeeOther)
 		return
 	}
-	if err := s.store.AddTask(id, title, planned); err != nil {
+	if err := s.store.AddTask(id, title); err != nil {
 		s.fail(w, http.StatusInternalServerError, "Aufgabe konnte nicht gespeichert werden")
 		return
 	}
@@ -797,13 +797,12 @@ func (s *Server) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	title := r.FormValue("title")
-	planned, err := strconv.ParseInt(r.FormValue("planned"), 10, 64)
-	if title == "" || err != nil || planned < 0 {
+	if title == "" {
 		http.Redirect(w, r, fmt.Sprintf("/orders/%d?err=Ung%%C3%%BCltige+Aufgabe.", orderID), http.StatusSeeOther)
 		return
 	}
 	done := r.FormValue("done") == "on"
-	if err := s.store.UpdateTask(orderID, taskID, title, planned, done); err != nil {
+	if err := s.store.UpdateTask(orderID, taskID, title, done); err != nil {
 		s.fail(w, http.StatusInternalServerError, "Aufgabe konnte nicht gespeichert werden")
 		return
 	}
@@ -903,10 +902,10 @@ func (s *Server) reportCSV(w http.ResponseWriter, r *http.Request) {
 		{"Abweichung (Prozent)", fmt.Sprintf("%.1f", rep.DeviationPercent)},
 		{"Notiz", csvSafe(rep.Notes)},
 		{},
-		{"Aufgabe", "Geplant (Minuten)"},
+		{"Aufgabe"},
 	}
 	for _, task := range rep.Tasks {
-		rows = append(rows, []string{csvSafe(task.Title), strconv.FormatInt(task.PlannedMinutes, 10)})
+		rows = append(rows, []string{csvSafe(task.Title)})
 	}
 	if err := cw.WriteAll(rows); err != nil {
 		s.logger.Printf("write csv: %v", err)
@@ -933,16 +932,37 @@ func (s *Server) admin(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) createTaskTemplate(w http.ResponseWriter, r *http.Request) {
 	title := strings.TrimSpace(r.FormValue("title"))
-	planned, err := strconv.ParseInt(r.FormValue("planned"), 10, 64)
-	if title == "" || err != nil || planned < 0 || planned > 60000 {
-		http.Redirect(w, r, "/admin?err=Bezeichnung+und+geplante+Minuten+(0+bis+60000)+erforderlich.", http.StatusSeeOther)
+	if title == "" {
+		http.Redirect(w, r, "/admin?err=Bezeichnung+erforderlich.", http.StatusSeeOther)
 		return
 	}
-	if _, err := s.store.CreateTaskTemplate(title, planned); err != nil {
+	if _, err := s.store.CreateTaskTemplate(title); err != nil {
 		http.Redirect(w, r, "/admin?err=Aufgabe+mit+diesem+Namen+existiert+bereits.", http.StatusSeeOther)
 		return
 	}
 	http.Redirect(w, r, "/admin?ok=Aufgaben-Vorlage+angelegt.", http.StatusSeeOther)
+}
+
+func (s *Server) updateTaskTemplate(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r, "id")
+	if !ok {
+		s.fail(w, http.StatusBadRequest, "Ungültige Vorlagennummer")
+		return
+	}
+	title := strings.TrimSpace(r.FormValue("title"))
+	if title == "" {
+		http.Redirect(w, r, "/admin?err=Bezeichnung+erforderlich.", http.StatusSeeOther)
+		return
+	}
+	if err := s.store.UpdateTaskTemplate(id, title); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			s.fail(w, http.StatusNotFound, "Vorlage nicht gefunden")
+			return
+		}
+		http.Redirect(w, r, "/admin?err=Aufgabe+mit+diesem+Namen+existiert+bereits.", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/admin?ok=Aufgaben-Vorlage+gespeichert.", http.StatusSeeOther)
 }
 
 func (s *Server) deleteTaskTemplate(w http.ResponseWriter, r *http.Request) {
